@@ -1,0 +1,26 @@
+{
+   guistr: "# # String gsaved with Nlview 6.6.8  2016-12-21 bk=1.3817 VDI=40 GEI=35 GUI=JA:1.6
+#  -string -flagsOSRD
+preplace port rden -pg 1 -y -320 -defaultsOSRD
+preplace port clk -pg 1 -y -300 -defaultsOSRD
+preplace port BRAM_PORTA -pg 1 -y -360 -defaultsOSRD
+preplace portBus offset -pg 1 -y -280 -defaultsOSRD
+preplace inst NPU_WEIGHT_BRAM -pg 1 -lvl 1 -y -485 -defaultsOSRD -resize 285 170
+preplace inst NPU_WEIGHT_BRAM|npu_bram_ctrl_0 -pg 1 -lvl 1 -y -485 -defaultsOSRD
+preplace inst NPU_WEIGHT_BRAM|blk_mem_gen_0 -pg 1 -lvl 2 -y -325 -defaultsOSRD
+preplace netloc NPU_WEIGHT_BRAM|offset_1 1 0 1 N
+preplace netloc NPU_WEIGHT_BRAM|Conn1 1 0 2 120J -405 N
+preplace netloc NPU_WEIGHT_BRAM|blk_mem_gen_0_doutb 1 0 2 140 -305 NJ
+preplace netloc rden_1 1 0 1 -160J
+preplace netloc NPU_WEIGHT_BRAM|npu_bram_ctrl_0_dout 1 1 1 390
+preplace netloc NPU_WEIGHT_BRAM|npu_bram_ctrl_0_addr 1 1 1 400
+preplace netloc BRAM_PORTA_1 1 0 1 -170J
+preplace netloc NPU_WEIGHT_BRAM|clk_1 1 0 2 130 -395 380
+preplace netloc NPU_WEIGHT_BRAM|rden_1 1 0 1 N
+preplace netloc clk_1 1 0 1 -140J
+preplace netloc offset_1 1 0 1 -150J
+levelinfo -pg 1 -190 230 680 -top -770 -bot 160
+levelinfo -hier NPU_WEIGHT_BRAM * 260 530 *
+",
+}
+0
