@@ -43,7 +43,7 @@ reg [31:0] lfsr1 = SEED; // The seed is loaded into the register at initializati
 wire [31:0] x1;
 
 // This wire describes the XOR operation on bits 22 and 2 (polynomial : 32, 22, 2, 1)
-assign x1 = lfsr1 ^ {{10{1'b0}}, lfsr1[0], {19{1'b0}}, lfsr1[0], 1'b1};
+assign x1 = lfsr1 ^ {{10{1'b0}}, lfsr1[0], {19{1'b0}}, lfsr1[0], 1'b0};
     
 always @(posedge clk) begin
     if (rst) begin
