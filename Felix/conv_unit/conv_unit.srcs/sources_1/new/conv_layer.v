@@ -31,11 +31,12 @@ module conv_layer
     parameter integer conv_res_size = ((root+2*zero_padding) / stride)-filter_size+1
     )
     (
-    input clk,
+    input clk, ack, start,
     input [input_width*8 - 1 : 0] image,
     input [filter_size**2*filter_nb*8-1 : 0] filters,
     input [filter_nb*8-1 : 0] biases,
-    output reg done = 0,
+    output reg done = 1'b0,
+    output reg ready = 1'b0,
     output reg [filter_nb*(round_to_next_two(filter_size**2)+15)*(conv_res_size**2) - 1 : 0] out
     );
     
@@ -53,7 +54,7 @@ module conv_layer
     end
     endfunction
     
-    integer i, j;
+    integer i = 0, j = 0;
     integer filter_i = 0;
     integer filter_j = 0;
     integer filter_k = 0;
@@ -72,7 +73,9 @@ module conv_layer
                 for (i = 0; i<conv_res_size*conv_res_size*filter_nb; i = i+1) begin
                     out [i*(round_to_next_two(filter_size**2)+15) +: round_to_next_two(filter_size**2)+15] <= 0;
                 end
-                operation = 3'b001;
+                ready <= 1'b1;
+                done <= 1'b0;
+                operation = 3'b101;
             end
             
             3'b001: begin    // LOAD AND PAD INPUTS
@@ -83,12 +86,16 @@ module conv_layer
                 end
                 i <= 0;
                 j <= 0;
+                ready <= 1'b0;
+                done <= 1'b0;
                 operation = 3'b010;
             end
             3'b010: begin   // LOAD FILTER
-                for (j = 0; j<filter_size**2*filter_nb; j = j+1) begin
-                    conv_filter [j] <= filters[(filter_k*(filter_size**2)+j)*8 +: 8];
+                for (j = 0; j<filter_size**2; j = j+1) begin
+                    conv_filter [j] <= filters[(filter_k*(filter_size**2) +j)*8 +: 8];
                 end
+                ready <= 1'b0;
+                done <= 1'b0;
                 operation = 3'b011;
             end
             3'b011: begin    // CONVOLVE FILTER
@@ -124,14 +131,40 @@ module conv_layer
                         if (filter_k < filter_nb-1) begin
                             filter_k <= filter_k + 1;
                             operation <= 3'b010;
+                            ready <= 1'b0;
                             done <= 1'b0;
                         end
                         else begin
                             filter_k <= 0;
                             operation <= 3'b100;
+                            ready <= 1'b0;
                             done <= 1'b1;
                         end
                     end
+                end
+            end
+            3'b100: begin // DONE (WAIT)
+                if (ack) begin
+                    operation <= 3'b101;
+                    ready <= 1'b1;
+                    done <= 1'b0;
+                end
+                else begin
+                    operation <= 3'b100;
+                    ready <= 1'b0;
+                    done <= 1'b1;
+                end
+            end
+            3'b101: begin // READY
+                if (start) begin
+                    operation <= 3'b001;
+                    ready <= 1'b0;
+                    done <= 1'b0;
+                end
+                else begin
+                    operation <= 3'b101;
+                    ready <= 1'b1;
+                    done <= 1'b0;
                 end
             end
         endcase
