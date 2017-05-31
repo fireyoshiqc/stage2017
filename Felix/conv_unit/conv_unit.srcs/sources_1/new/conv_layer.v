@@ -22,13 +22,14 @@
 
 module conv_layer
     #(
-    parameter integer zero_padding = 1,
+    parameter integer dsp_max = 9,
+    parameter integer zero_padding = 0,
     parameter integer stride = 1,
-    parameter integer filter_size = 3,
-    parameter integer filter_nb = 2,
+    parameter integer filter_size = 2,
+    parameter integer filter_nb = 1,
     parameter integer input_width = 4,
     parameter integer root = 2,
-    parameter integer conv_res_size = ((root+2*zero_padding) / stride)-filter_size+1
+    parameter integer conv_res_size = ((root+2*zero_padding-filter_size)/stride) + 1
     )
     (
     input clk, ack, start,
@@ -37,32 +38,45 @@ module conv_layer
     input [filter_nb*8-1 : 0] biases,
     output reg done = 1'b0,
     output reg ready = 1'b0,
-    output reg [filter_nb*(round_to_next_two(filter_size**2)+15)*(conv_res_size**2) - 1 : 0] out
+    output reg [filter_nb*(clogb2(round_to_next_two(filter_size**2))+16)*(conv_res_size**2) - 1 : 0] out
     );
     
     function integer round_to_next_two;
-    input integer x;
-    begin
-    x = x - 1;
-    x = x | (x >> 1);
-    x = x | (x >> 2);
-    x = x | (x >> 4);
-    x = x | (x >> 8);
-    x = x | (x >> 16);
-    x = x + 1;
-    round_to_next_two = x;
-    end
+        input integer x;
+        begin
+            x = x - 1;
+            x = x | (x >> 1);
+            x = x | (x >> 2);
+            x = x | (x >> 4);
+            x = x | (x >> 8);
+            x = x | (x >> 16);
+            x = x + 1;
+            round_to_next_two = x;
+        end
     endfunction
+    
+    function integer clogb2;
+        input [31:0] value;
+        integer i;
+        begin
+          clogb2 = 0;
+          for(i = 0; 2**i < value; i = i + 1)
+                clogb2 = i + 1;
+        end
+    endfunction
+    
+    localparam integer dsp_iters = (filter_size**2 + (dsp_max - 1))/ dsp_max;
     
     integer i = 0, j = 0;
     integer filter_i = 0;
     integer filter_j = 0;
     integer filter_k = 0;
+    integer dsp_i = 0;
     reg [2:0] operation = 0;
     reg [7:0] vram [input_width + 4*root*zero_padding + 4*zero_padding**2 - 1 : 0];
     reg [7:0] conv_filter [filter_size**2 - 1 : 0];
     reg [15:0] products [filter_size**2 - 1 : 0];
-    reg [(round_to_next_two(filter_size**2)+15)-1:0] sum = 0;
+    reg [(clogb2(round_to_next_two(filter_size**2))+16)-1:0] sum = 0;
     
     always @(posedge clk) begin
         case (operation)
@@ -71,7 +85,7 @@ module conv_layer
                     vram [i] <= 0;
                 end
                 for (i = 0; i<conv_res_size*conv_res_size*filter_nb; i = i+1) begin
-                    out [i*(round_to_next_two(filter_size**2)+15) +: round_to_next_two(filter_size**2)+15] <= 0;
+                    out [i*(clogb2(round_to_next_two(filter_size**2))+16) +: clogb2(round_to_next_two(filter_size**2))+16] <= 0;
                 end
                 ready <= 1'b1;
                 done <= 1'b0;
@@ -99,6 +113,10 @@ module conv_layer
                 operation = 3'b011;
             end
             3'b011: begin    // CONVOLVE FILTER
+            
+                
+            
+            
                 for (i = 0; i < filter_size; i = i + 1) begin
                     for (j = 0; j < filter_size; j = j + 1) begin
                         products [i*filter_size+j] = vram[(i+filter_i*stride)*(root+2*zero_padding)+(j+filter_j*stride)]
@@ -107,9 +125,9 @@ module conv_layer
                     end
                 end
                 out [((filter_i*conv_res_size+filter_j)
-                *(round_to_next_two(filter_size**2)+15))
-                +filter_k*(conv_res_size**2*(round_to_next_two(filter_size**2)+15))
-                +: round_to_next_two(filter_size**2)+15] = sum;
+                *(clogb2(round_to_next_two(filter_size**2))+16))
+                +filter_k*(conv_res_size**2*(clogb2(round_to_next_two(filter_size**2))+16))
+                +: clogb2(round_to_next_two(filter_size**2))+16] = sum;
                 sum = 0;
                 if (filter_i < conv_res_size - 1) begin
                     if (filter_j < conv_res_size-1) begin
