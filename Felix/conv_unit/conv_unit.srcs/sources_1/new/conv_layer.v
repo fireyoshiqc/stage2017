@@ -99,36 +99,40 @@ module conv_layer
             3'b001: begin    // LOAD AND PAD INPUTS
                 // BRAM LOAD
                 // MUST OPTIMIZE ADDRESSING
-                vram [(clocked_i*(root+2*zero_padding) + clocked_j)] <= din;
-                if (clocked_i == zero_padding && clocked_j == zero_padding) begin
-                    addr = 0;
+                vram [(clocked_i*(root+2*zero_padding) + clocked_j)] = din;
+                
+                if (addr == 0) begin // LOSE A CLOCK CYCLE TO ALLOW BRAM TO KEEP UP
+                    clocked_i <= clocked_i;
+                    clocked_j <= clocked_j;
                 end
                 else begin
-                    addr = addr + 1;
-                end
-                if (clocked_i < root+zero_padding - 1) begin
-                    if (clocked_j < root+zero_padding - 1) begin
-                        clocked_j = clocked_j + 1;   
+                    if (clocked_i < root+zero_padding - 1) begin
+                        if (clocked_j < root+zero_padding - 1) begin
+                            clocked_j = clocked_j + 1;   
+                        end
+                        else begin
+                            clocked_j = zero_padding;
+                            clocked_i = clocked_i + 1;
+                        end
                     end
                     else begin
-                        clocked_j = zero_padding;
-                        clocked_i = clocked_i + 1;
+                        if (clocked_j < root+zero_padding - 1) begin
+                            clocked_j = clocked_j + 1;
+                        end
+                        else begin
+                            clocked_i = 0;
+                            clocked_j = 0;
+                            ready <= 1'b0;
+                            done <= 1'b0;
+                            load_done <= 1'b1;
+                            operation = 3'b010; // TO FILTER LOAD
+                        end
                     end
                 end
-                else begin
-                    if (clocked_j < root+zero_padding - 1) begin
-                        clocked_j = clocked_j + 1;
-                    end
-                    else begin
-                        clocked_i = 0;
-                        clocked_j = 0;
-                        addr <= 0;
-                        ready <= 1'b0;
-                        done <= 1'b0;
-                        load_done <= 1'b1;
-                        operation = 3'b010; // TO FILTER LOAD
-                    end
-                end
+                
+                addr = addr + 1;
+
+                
 
                 // ALL-AT-ONCE-LOAD
 //                for (i = zero_padding; i<root+zero_padding; i = i+1) begin
@@ -143,6 +147,7 @@ module conv_layer
 //                operation = 3'b010;
             end
             3'b010: begin   // LOAD FILTER
+                addr = 0;
                 for (j = 0; j<filter_size**2; j = j+1) begin
                     conv_filter [j] <= filters[(clocked_k*(filter_size**2) +j)*8 +: 8];
                 end

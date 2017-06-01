@@ -34,16 +34,16 @@ module top_nn #(
     )
     (
     input clk,
-    input c1start,
-    input [7:0] c1din,
+    input start,
+    input [7:0] din,
     input [c1filter_size**2*c1filter_nb*8-1 : 0] c1filters,
     input [c2filter_size**2*c2filter_nb*8-1 : 0] c2filters,
     input [c1filter_nb*8-1 : 0] c1biases,
     input [c2filter_nb*8-1 : 0] c2biases,
-    output c1ready,
-    output c1lddone,
-    output c2done,
-    output [7:0] c2dout
+    output ready,
+    output lddone,
+    output done,
+    output [7:0] dout
     );
     
     wire c2ackc1;
@@ -71,16 +71,17 @@ module top_nn #(
         (
         .clk(clk),
         .ack(c2ackc1),
-        .start(c1start),
-        .din(c1din),
+        .start(start),
+        .din(din),
         .filters(c1filters),
         .biases(c1biases),
         .done_w(c1doneb1),
-        .ready_w(c1ready),
-        .load_done_w(c1lddone),
+        .ready_w(ready),
+        .load_done_w(lddone),
         .dout_w(c1dinb1),
         .addr_w(c1addrb1)
         );
+        
     bram_interlayer #(
         
         )
@@ -95,6 +96,10 @@ module top_nn #(
         .dout(b1doutc2),
         .start(b1startc2)
         );
+    
+    wire c2doneb2;
+    wire [7:0] c2dinb2;
+    wire m1ackc2;
         
     conv_layer #(
         .zero_padding(c2padding),
@@ -107,16 +112,55 @@ module top_nn #(
         conv2
         (
         .clk(clk),
-        .ack(1'b1),
+        .ack(m1ackc2),
         .start(b1startc2),
         .din(b1doutc2),
         .filters(c2filters),
         .biases(c2biases),
-        .done_w(c2done),
+        .done_w(c2doneb2),
         .ready_w(c2readyb1),
         .load_done_w(c2ackc1),
-        .dout_w(c2dout),
+        .dout_w(c2dinb2),
         .addr_w(c2addrb1)
+        );
+    
+    wire m1readyb2;
+    wire [9:0] m1addrb2;
+    wire [7:0] b2doutm1;
+    wire b2startm1;
+        
+    bram_interlayer #(
+        
+        )
+        bram2
+        (
+        .clk(clk),
+        .done(c2doneb2),
+        .ready(m1readyb2),
+        .wr_addr(c2addrb1),
+        .rd_addr(m1addrb2),
+        .din(c2dinb2),
+        .dout(b2doutm1),
+        .start(b2startm1)
+        );
+        
+    maxpool_layer #(
+        .pool_size(2),
+        .input_width(9),
+        .root(3),
+        .stride(1)
+        )
+        max1
+        (
+        .clk(clk),
+        .ack(1'b1),
+        .start(b2startm1),
+        .din(b2doutm1),
+        .dout(dout),
+        .ready(m1readyb2),
+        .done(done),
+        .load_done(m1ackc2),
+        .addr(m1addrb2)
         );
     
 endmodule

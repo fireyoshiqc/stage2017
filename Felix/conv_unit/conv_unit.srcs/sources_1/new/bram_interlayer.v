@@ -23,7 +23,7 @@
 module bram_interlayer
     #(
     parameter integer data_width = 8,
-    parameter integer data_depth = 784*40
+    parameter integer data_depth = 784
     )
     (
     input clk, done, ready,
