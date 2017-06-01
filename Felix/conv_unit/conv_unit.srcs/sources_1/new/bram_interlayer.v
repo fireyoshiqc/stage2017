@@ -23,7 +23,7 @@
 module bram_interlayer
     #(
     parameter integer data_width = 8,
-    parameter integer data_depth = 784
+    parameter integer data_depth = 784*40
     )
     (
     input clk, done, ready,
@@ -34,7 +34,7 @@ module bram_interlayer
     output reg start = 1'b0
     );
     
-    reg [data_width:0] bram [round_to_next_two(data_depth)-1:0];
+    reg [data_width-1:0] bram [round_to_next_two(data_depth)-1:0];
     wire wren = ~done;
     
     

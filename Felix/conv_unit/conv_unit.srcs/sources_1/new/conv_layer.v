@@ -22,7 +22,8 @@
 
 module conv_layer
     #(
-    parameter integer dsp_max = 9,
+    //parameter integer dsp_max = 9,
+    parameter integer bram_depth = 784,
     parameter integer zero_padding = 0,
     parameter integer stride = 1,
     parameter integer filter_size = 2,
@@ -33,33 +34,50 @@ module conv_layer
     )
     (
     input clk, ack, start,
-    input [input_width*8 - 1 : 0] image,
     input [8 - 1 : 0] din,
     input [filter_size**2*filter_nb*8-1 : 0] filters,
     input [filter_nb*8-1 : 0] biases,
-    output reg done = 1'b0,
-    output reg ready = 1'b0,
-    //output reg [filter_nb*(clogb2(round_to_next_two(filter_size**2))+16)*(conv_res_size**2) - 1 : 0] out,
-    output reg [8*filter_nb*conv_res_size**2 - 1 : 0] out
+    output done_w,
+    output ready_w,
+    output load_done_w,
+    output [8 - 1 : 0] dout_w,
+    output [clogb2(round_to_next_two(bram_depth))-1 : 0] addr_w
     );
     
     `include "functions.vh"
     
 
     
-    localparam integer dsp_iters = (filter_size**2 + (dsp_max - 1))/ dsp_max;
+    //localparam integer dsp_iters = (filter_size**2 + (dsp_max - 1))/ dsp_max;
     
     integer i = 0, j = 0;
     integer clocked_i = 0;
     integer clocked_j = 0;
     integer clocked_k = 0;
     integer dsp_i = 0;
+    
+    reg done = 1'b0;
+    reg ready = 1'b0;
+    reg load_done = 1'b0;
+        //output reg [filter_nb*(clogb2(round_to_next_two(filter_size**2))+16)*(conv_res_size**2) - 1 : 0] out,
+        //output reg [8*filter_nb*conv_res_size**2 - 1 : 0] out,
+    reg [8 - 1 : 0] dout;
+    reg [clogb2(round_to_next_two(input_width))-1 : 0] addr = 0;
+    
     reg [2:0] operation = 0;
     reg [7:0] vram [input_width + 4*root*zero_padding + 4*zero_padding**2 - 1 : 0];
     reg [7:0] conv_filter [filter_size**2 - 1 : 0];
     reg [15:0] products [filter_size**2 - 1 : 0];
     reg [clogb2(round_to_next_two(filter_size**2))+16-1:0] sum = 0;
-    reg [clogb2(round_to_next_two(input_width))-1 : 0] addr = 0;
+    
+    wire vram_addr [31:0];
+    
+    assign done_w = done;
+    assign ready_w = ready;
+    assign load_done_w = load_done;
+    assign dout_w = dout;
+    assign addr_w = addr;
+    
     
     always @(posedge clk) begin
         case (operation)
@@ -67,18 +85,27 @@ module conv_layer
                 for (i = 0; i<input_width + 4*root*zero_padding + 4*zero_padding**2; i = i+1) begin
                     vram [i] <= 0;
                 end
-                for (i = 0; i<conv_res_size**2 * filter_nb; i = i+1) begin
-                    out [i*8 +: 8] <= 0;
-                end
+//                for (i = 0; i<conv_res_size**2 * filter_nb; i = i+1) begin
+//                    out [i*8 +: 8] <= 0;
+//                end
+                addr <= 0;
+                dout <= 0;
                 ready <= 1'b1;
                 done <= 1'b0;
+                load_done <= 1'b0;
                 operation = 3'b101;
             end
             
             3'b001: begin    // LOAD AND PAD INPUTS
                 // BRAM LOAD
-                vram [clocked_i*(root+2*zero_padding) + clocked_j] <= din;
-                addr = addr + 1;
+                // MUST OPTIMIZE ADDRESSING
+                vram [(clocked_i*(root+2*zero_padding) + clocked_j)] <= din;
+                if (clocked_i == zero_padding && clocked_j == zero_padding) begin
+                    addr = 0;
+                end
+                else begin
+                    addr = addr + 1;
+                end
                 if (clocked_i < root+zero_padding - 1) begin
                     if (clocked_j < root+zero_padding - 1) begin
                         clocked_j = clocked_j + 1;   
@@ -95,8 +122,10 @@ module conv_layer
                     else begin
                         clocked_i = 0;
                         clocked_j = 0;
+                        addr <= 0;
                         ready <= 1'b0;
                         done <= 1'b0;
+                        load_done <= 1'b1;
                         operation = 3'b010; // TO FILTER LOAD
                     end
                 end
@@ -119,6 +148,7 @@ module conv_layer
                 end
                 ready <= 1'b0;
                 done <= 1'b0;
+                load_done <= 1'b1;
                 operation = 3'b011;
             end
             3'b011: begin    // CONVOLVE FILTER
@@ -134,9 +164,16 @@ module conv_layer
                     end
                 end
                 sum = sum + biases[clocked_k*8 +: 8];
-                out [((clocked_i*conv_res_size+clocked_j)*8)+clocked_k*(conv_res_size**2*8) +: 8] 
-                = sum[(clogb2(round_to_next_two(filter_size**2))+16)-1 -: 8] ;
+//                out [((clocked_i*conv_res_size+clocked_j)*8)+clocked_k*(conv_res_size**2*8) +: 8] 
+//                = sum[(clogb2(round_to_next_two(filter_size**2))+16)-1 -: 8] ;
+                dout = sum[(clogb2(round_to_next_two(filter_size**2))+16)-1 -: 8]+sum[(clogb2(round_to_next_two(filter_size**2))+16)-1];
                 sum = 0;
+                if (clocked_i == 0 && clocked_j == 0) begin
+                    addr = 0;
+                end
+                else begin
+                    addr = addr + 1;
+                end
                 if (clocked_i < conv_res_size - 1) begin
                     if (clocked_j < conv_res_size-1) begin
                         clocked_j <= clocked_j + 1;
@@ -163,22 +200,23 @@ module conv_layer
                         else begin
                             clocked_k <= 0;
                             operation <= 3'b100;
-                            ready <= 1'b0;
-                            done <= 1'b1;
                         end
                     end
                 end
             end
             3'b100: begin // DONE (WAIT)
+                addr <= 0;
                 if (ack) begin // TO READY
                     operation <= 3'b101;
                     ready <= 1'b1;
                     done <= 1'b0;
+                    load_done <= 1'b0;
                 end
                 else begin // TO DONE
                     operation <= 3'b100;
                     ready <= 1'b0;
                     done <= 1'b1;
+                    load_done <= 1'b1;
                 end
             end
             3'b101: begin // READY
@@ -186,6 +224,7 @@ module conv_layer
                     operation <= 3'b001;
                     ready <= 1'b0;
                     done <= 1'b0;
+                    load_done <= 1'b0;
                     clocked_i = zero_padding;
                     clocked_j = zero_padding;
                 end
@@ -193,6 +232,7 @@ module conv_layer
                     operation <= 3'b101;
                     ready <= 1'b1;
                     done <= 1'b0;
+                    load_done <= 1'b0;
                 end
             end
         endcase
