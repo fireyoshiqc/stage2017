@@ -38,7 +38,7 @@ module maxpool_layer
     output reg done = 1'b0,
     output reg ready = 1'b0,
     output reg load_done = 1'b0,
-    output reg [clogb2(round_to_next_two(bram_depth))-1 : 0] addr
+    output reg [clogb2(round_to_next_two(bram_depth))-1 : 0] addr = 0
     );
     
     `include "functions.vh"

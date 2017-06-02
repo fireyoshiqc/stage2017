@@ -171,7 +171,7 @@ module conv_layer
                 sum = sum + biases[clocked_k*8 +: 8];
 //                out [((clocked_i*conv_res_size+clocked_j)*8)+clocked_k*(conv_res_size**2*8) +: 8] 
 //                = sum[(clogb2(round_to_next_two(filter_size**2))+16)-1 -: 8] ;
-                dout = sum[(clogb2(round_to_next_two(filter_size**2))+16)-1 -: 8]+sum[(clogb2(round_to_next_two(filter_size**2))+16)-1];
+                dout = sum[(clogb2(round_to_next_two(filter_size**2))+16)-1 -: 8]+sum[(clogb2(round_to_next_two(filter_size**2))+8)-1];
                 sum = 0;
                 if (clocked_i == 0 && clocked_j == 0) begin
                     addr = 0;
