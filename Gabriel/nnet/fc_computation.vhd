@@ -29,76 +29,103 @@ port(
     w_data : in std_logic_vector(simd_width * size(weight_spec) - 1 downto 0);
     out_a : out std_logic_vector(output_width * size(output_spec) - 1 downto 0);
     op_argument : out sfixed(mk(op_arg_spec)'range);
-    op_result : in sfixed(mk(output_spec)'range)
+    op_result : in sfixed(mk(output_spec)'range);
+	op_send : out std_logic := '0'
 );
 end fc_computation;
 
 architecture fc_computation of fc_computation is
+
+component mulacc is
+generic(
+    a_spec, b_spec, c_spec : fixed_spec
+);
+port(
+    acc, clr : in std_logic;
+    a : in sfixed(mk(a_spec)'range);
+    b : in sfixed(mk(b_spec)'range);
+    c : out sfixed(mk(c_spec)'range)
+);
+end component mulacc;
     
     subtype input_word_t is sfixed(mk(input_spec)'range);
     subtype weight_word_t is sfixed(mk(weight_spec)'range);
     subtype op_arg_word_t is sfixed(mk(op_arg_spec)'range);
     subtype output_word_t is sfixed(mk(output_spec)'range);
     subtype mulacc_word_t is sfixed(input_spec.int + weight_spec.int + input_width / simd_width - 1 downto -(input_spec.frac + weight_spec.frac));
-    subtype final_word_t is sfixed(input_spec.int + weight_spec.int + input_width - 1 downto -(input_spec.frac + weight_spec.frac));
-    
-    type accumulated_t is array(simd_width - 1 downto 0) of mulacc_word_t;
-    type reduced_t is array(simd_width - 1 downto 0) of final_word_t;
-    
-	signal accumulated : accumulated_t := (others => (others => '0'));
 	
-	function resize_each_to_final(acc : accumulated_t) return reduced_t is
-        variable red : reduced_t;
-	begin
-        for i in acc'range loop
-            red(i) := resize(acc(i), red(i));
-        end loop;
-        return red;
-	end resize_each_to_final;
-	
-    function reduce(acc : accumulated_t) return final_word_t is
-        variable p : reduced_t := resize_each_to_final(acc);
-        variable end_of_p : integer := p'length;
-        variable i : integer := 0;
+    function half_upper(x : integer) return integer is
     begin
-        while end_of_p > 1 loop
-            while 2 * i < end_of_p loop
-                if 2 * i = end_of_p - 1 then
-                    p(i) := p(2 * i);
-                else
-                    p(i) := resize(p(2 * i) + p(2 * i + 1), p(i));
-                end if;
-                i := i + 1;
+        if x mod 2 = 0 then
+            return x / 2;
+        else
+            return (x + 1) / 2;
+        end if;
+    end half_upper;
+    
+    
+    function reduce(vals : std_logic_vector; remaining : integer; spec : fixed_spec) return sfixed is
+        variable res : std_logic_vector(half_upper(remaining) * size(spec + spec) - 1 downto 0);
+    begin
+        if remaining = 1 then
+            return resize(to_sfixed(vals, mk(spec)), mk(op_arg_spec));
+        else
+            for i in 0 to remaining / 2 - 1 loop
+                set_var(res, i, get(vals, 2 * i, mk(spec)) + get(vals, 2 * i + 1, mk(spec)));
             end loop;
-            end_of_p := i;
-            i := 0;
-        end loop;
-        return p(0);
+            if remaining mod 2 /= 0 then
+                set_var(res, half_upper(remaining) - 1, resize(get(vals, remaining - 1, mk(spec)), mk(spec + spec)));
+            end if;
+            return reduce(res, half_upper(remaining), spec + spec);
+        end if;
     end reduce;
 	
-	signal out_a_sig : std_logic_vector(output_width * size(output_spec) - 1 downto 0);
+	type simd_mulacc_cells_t is array(0 to simd_width - 1) of mulacc_word_t;
+	signal simd_mulacc_cells : simd_mulacc_cells_t := (others => (others => '0'));
 	
+	function prepare2(cells : simd_mulacc_cells_t) return std_logic_vector is
+        variable prep : std_logic_vector(cells'length * cells(0)'length - 1 downto 0);
+    begin
+        for i in cells'range loop
+            prep((i + 1) * cells(0)'length - 1 downto i * cells(0)'length) := std_logic_vector(cells(i));
+        end loop;
+        return prep;
+    end prepare2;
+    
+--    function reduceX(cells : simd_mulacc_cells_t; i : integer) return sfixed is
+--    begin
+--        if cells'length - 1 = i then
+--            return cells(i);
+--        else
+--            return cells(i) + reduceX(cells, i + 1);
+--        end if;
+--    end reduceX;
+	
+    signal out_a_reg : std_logic_vector(output_width * size(output_spec) - 1 downto 0);
+    
+    signal debug : op_arg_word_t;
 begin
     
-process(clk, rst, op_result)
-    variable input_dummy : input_word_t;
-    variable weight_dummy : weight_word_t;
-    variable op_arg_dummy : op_arg_word_t;
+    out_a <= out_a_reg;
+
+process(clk, rst, in_a, in_offset, w_data)
 begin
-	set(out_a, to_integer(out_offset), op_result);
-    if rst = '1' then
-        out_a <= (others => '0');
-    elsif rising_edge(clk) then
+    if rising_edge(clk) then
         case directives is
         when directives_from(directive_mul_acc) =>
-            for i in accumulated'range loop
-                accumulated(i) <= resize(accumulated(i) + resize(get(w_data, i, weight_dummy) * get(in_a, to_integer(in_offset) + i, input_dummy), accumulated(i)), accumulated(i));
+            for i in simd_mulacc_cells'range loop
+                simd_mulacc_cells(i) <= resize(simd_mulacc_cells(i) + get(w_data, i, mk(weight_spec)) * get(in_a, to_integer(in_offset) + i, mk(input_spec)), simd_mulacc_cells(i));		
             end loop;
         when directives_from(directive_reduce) =>
-			op_argument <= resize(reduce(accumulated), op_arg_dummy);
+			op_argument <= reduce(prepare2(simd_mulacc_cells), simd_mulacc_cells'length, specof(simd_mulacc_cells(0)));
+			op_send <= '1';
         when directives_from(directive_reset_mul_acc) =>
-            accumulated <= (others => (others => '0'));
+			set(out_a_reg, to_integer(out_offset), op_result);
+            for i in simd_mulacc_cells'range loop
+                simd_mulacc_cells(i) <= (others => '0');
+            end loop;
         when others =>
+            op_send	<= '0';
         end case;
     end if;
 end process;

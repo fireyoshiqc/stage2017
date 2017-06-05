@@ -14,11 +14,14 @@ generic(
 );
 port(
     input : in sfixed(mk(spec)'range);
-    output : out sfixed(mk(spec)'range)
+    output : out sfixed(mk(spec)'range);
+    op_send : out std_logic;
+    op_receive : in std_logic
 );
 end relu_op;
 
 architecture relu_op of relu_op is
 begin
+    op_send <= op_receive;
 	output <= input when input(input'high) = '0' else to_sfixed(0.0, input);
 end relu_op;

@@ -14,6 +14,7 @@ type reals is array(natural range <>) of real;
 
 function get(buf : std_logic_vector; index : integer; example : sfixed) return sfixed;
 procedure set(signal buf : out std_logic_vector; index : integer; value : sfixed);
+procedure set_var(variable buf : out std_logic_vector; index : integer; value : sfixed);
 
 function max(a : integer; b : integer) return integer;
 
@@ -24,6 +25,7 @@ end record fixed_spec;
 
 function size(fs : fixed_spec) return integer;
 function mk(fs : fixed_spec) return sfixed;
+function specof(x : sfixed) return fixed_spec;
 function "+" (fs1 : fixed_spec; fs2 : fixed_spec) return fixed_spec;
 function "-" (fs1 : fixed_spec; fs2 : fixed_spec) return fixed_spec;
 function "*" (fs1 : fixed_spec; fs2 : fixed_spec) return fixed_spec;
@@ -34,6 +36,9 @@ function vec_image(arg : std_logic_vector) return string;
 function identity(sf : sfixed) return sfixed;
 
 function shift_range(x : std_logic_vector; n : integer) return std_logic_vector;
+
+--procedure write(variable s : out string; w : in string; variable pos : inout integer);
+function write(s : string; w : in string; pos : integer) return string;
 
 end util;
 
@@ -54,6 +59,10 @@ procedure set(signal buf : out std_logic_vector; index : integer; value : sfixed
 begin
     buf((index + 1) * value'length - 1 downto index * value'length) <= std_logic_vector(value);
 end set;
+procedure set_var(variable buf : out std_logic_vector; index : integer; value : sfixed) is --procedures can possibly not work right during static initialization?
+begin
+    buf((index + 1) * value'length - 1 downto index * value'length) := std_logic_vector(value);
+end set_var;
 
 function max(a : integer; b : integer) return integer is
 begin
@@ -72,6 +81,10 @@ function mk(fs : fixed_spec) return sfixed is
 begin
     return to_sfixed(0.0, fs.int - 1, -fs.frac);
 end mk;
+function specof(x : sfixed) return fixed_spec is
+begin
+    return fixed_spec'(int => x'high + 1, frac => -x'low);
+end specof;
 function "+" (fs1 : fixed_spec; fs2 : fixed_spec) return fixed_spec is
 begin
     return (max(fs1.int, fs2.int) + 1, max(fs1.frac, fs2.frac));
@@ -110,13 +123,38 @@ begin
 	return sf;
 end identity;
 
+function identity(slv : std_logic_vector) return std_logic_vector is
+begin
+	return slv;
+end identity;
+
 function shift_range(x : std_logic_vector; n : integer) return std_logic_vector is
 	variable res : std_logic_vector(x'high + n downto x'low + n);
 begin
-	for i in x'range loop
-		res(i + n) := x(i);
+	for i in res'range loop--x'range loop 
+		res(i) := x(i - n);--res(i + n) := x(i);
 	end loop;
 	return res;
 end shift_range;
+
+--procedure write(variable s : out string; w : in string; variable pos : inout integer) is
+--    variable curw : integer := 1;
+--begin
+--    while curw <= w'length loop
+--        s(pos) := w(curw);
+--        curw := curw + 1;
+--        pos := pos + 1;
+--    end loop;
+--end write;
+
+function write(s : string; w : in string; pos : integer) return string is
+    variable curp : integer := pos;
+    variable ss : string(s'range) := s;
+begin
+    for i in w'range loop
+        ss(pos + i) := w(i);
+    end loop;
+    return ss;
+end write;
 
 end util;

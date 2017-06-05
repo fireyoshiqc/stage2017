@@ -17,7 +17,9 @@ generic(
 port(
     input : in sfixed(mk(input_spec)'range);
     offset : in unsigned(bits_needed(biases'length) - 1 downto 0);
-    output : out sfixed(mk(input_spec + bias_spec)'range)
+    output : out sfixed(mk(input_spec + bias_spec)'range);
+    op_send : out std_logic := '0';
+    op_receive : in std_logic := '0'
 );
 end bias_op;
 
@@ -34,5 +36,6 @@ architecture bias_op of bias_op is
     end actual_biases_init;
     constant actual_biases : biases_t := actual_biases_init;
 begin
+    op_send <= op_receive;
     output <= input + actual_biases(to_integer(offset));
 end bias_op;

@@ -17,13 +17,20 @@ generic(
 	bit_precision : integer
 );
 port(
+    clk : in std_logic;
     input : in sfixed(mk(input_spec)'range);
-    output : out sfixed(mk(output_spec)'range)
+    output : out sfixed(mk(output_spec)'range);
+    op_send : out std_logic := '0';
+    op_receive : in std_logic := '0'
 );
 end sigmoid_op;
 
-architecture sigmoid_op of sigmoid_op is
-
+architecture sigmoid_op of sigmoid_op is  
+    
+    signal state : std_logic := '0';
+    signal reg : sfixed(mk(output_spec)'range);
+    signal op_send_sig : std_logic := '0';
+    
 	function sigmoid(x : real) return real is
 	begin
 		 return 1.0 / (1.0 + exp(-x));
@@ -56,28 +63,50 @@ architecture sigmoid_op of sigmoid_op is
         return ret;
     end coeffs_init;
     constant coeffs : coeffs_t := coeffs_init;
+    
+    procedure calculate(signal dest : out sfixed; signal from : in sfixed) is
+        variable x : sfixed(mk(abs(input_spec))'range);
+        variable y : sfixed(output_spec.int - 1 downto -output_spec.frac);--(mk(output_spec)'range);
+        variable index : unsigned(bits_needed(max_approx) + step_precision - 1 downto 0);
+        variable a : sfixed(bits_needed(max_approx) downto -step_precision);
+        variable coeff : coeff_t;
+        --variable dummy : coeffs_t;
+    begin
+        --dummy := coeffs_init;
+        x := abs(from);
+        if x >= real(max_approx) then
+            y := to_sfixed(1.0, y);
+        else
+            index := unsigned(shift_range(std_logic_vector(x(bits_needed(max_approx) - 1 downto -step_precision)), step_precision));--unsigned(std_logic_vector(x(bits_needed(max_approx) - 1 downto -step_precision)));
+            coeff := coeffs(to_integer(index));
+            a := to_sfixed("0" & std_logic_vector(index), a);
+            y := resize(coeff.approx + (x - a) * coeff.slope, y);
+        end if;
+        if from(from'high) = '1' then
+            y := resize(1 - y, y);
+        end if;
+        dest <= y;
+    end calculate;
+    
 begin
-    process(input)
-		variable x : sfixed(mk(abs(input_spec))'range);
-		variable y : sfixed(mk(output_spec)'range);
-		variable index : unsigned(bits_needed(max_approx) + step_precision - 1 downto 0);
-		variable a : sfixed(bits_needed(max_approx) downto -step_precision);
-		variable coeff : coeff_t;
-		--variable dummy : coeffs_t;
-	begin
-		--dummy := coeffs_init;
-		x := abs(input);
-		if x >= real(max_approx) then
-			y := to_sfixed(1.0, y);
-		else
-			index := unsigned(shift_range(std_logic_vector(x(bits_needed(max_approx) - 1 downto -step_precision)), step_precision));
-			coeff := coeffs(to_integer(index));
-			a := to_sfixed("0" & std_logic_vector(index), a);
-			y := resize(coeff.approx + (x - a) * coeff.slope, y);
-		end if;
-		if input(input'high) = '1' then
-			y := resize(1 - y, y);
-		end if;
-		output <= y;
-	end process;
+process(clk)
+begin
+    if rising_edge(clk) then
+        if op_send_sig = '1' then
+            op_send <= '0';
+            op_send_sig <= '0';
+        end if;
+        if state = '0' then
+            if op_receive = '1' then
+                calculate(reg, input);
+                state <= '1';
+            end if;
+        else
+            output <= reg;
+            op_send <= '1';
+            op_send_sig <= '1';
+            state <= '0';
+        end if;
+    end if;
+end process;
 end sigmoid_op;

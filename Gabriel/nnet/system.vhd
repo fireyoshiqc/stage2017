@@ -1,22 +1,27 @@
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.NUMERIC_STD.ALL;
+use std.textio.all;
+use ieee.std_logic_textio.all;
 
 library ieee_proposed;
 use ieee_proposed.fixed_pkg.all;
 
 library work;
 use work.util.all;
+use work.test_data;
 
 entity system is
-port(clk, rst,
+port(--clk, rst,
     start : in std_logic;
-    ack, done : out std_logic;
+    --ack, done : out std_logic;
     --in_a : in std_logic_vector(6 * 8 - 1 downto 0);
-    out_a : out std_logic_vector(3 * 12  - 1 downto 0)
-    --test_out : out std_logic_vector(8 - 1 downto 0);
+    --out_a : out std_logic_vector(3 * 10  - 1 downto 0);
+    --in_a : in std_logic_vector(test_data.inputs'length * 9 - 1 downto 0);
+    --out_a : out std_logic_vector(test_data.biases'length * 10  - 1 downto 0)
+    test_out : out std_logic_vector(8 - 1 downto 0);
     --clk_out : out std_logic;
-    --sel : in unsigned(2 - 1 downto 0)
+    sel : in unsigned(8 - 1 downto 0)
 );
 end system;
 
@@ -37,7 +42,9 @@ generic(
     weight_spec : fixed_spec;
     op_arg_spec : fixed_spec;
     output_spec : fixed_spec;
-    ROM_weights : reals
+    n_weights : integer;
+    weights_filename : string;
+    weight_values : reals
 );
 port(
     clk, rst : in std_logic;
@@ -47,7 +54,9 @@ port(
     out_a : out std_logic_vector(output_width * size(output_spec) - 1 downto 0);
     out_offset : out unsigned(bits_needed(output_width) - 1 downto 0);
     op_argument : out sfixed(mk(op_arg_spec)'range);
-    op_result : in sfixed(mk(output_spec)'range)
+    op_result : in sfixed(mk(output_spec)'range);
+    op_send : out std_logic;
+    op_receive : in std_logic
 );
 end component;
 
@@ -74,7 +83,9 @@ generic(
 port(
     input : in sfixed(mk(input_spec)'range);
     offset : in unsigned(bits_needed(biases'length) - 1 downto 0);
-    output : out sfixed(mk(input_spec + bias_spec)'range)
+    output : out sfixed(mk(input_spec + bias_spec)'range);
+    op_send : out std_logic;
+    op_receive : in std_logic
 );
 end component;
 
@@ -84,7 +95,9 @@ generic(
 );
 port(
     input : in sfixed(mk(spec)'range);
-    output : out sfixed(mk(spec)'range)
+    output : out sfixed(mk(spec)'range);
+    op_send : out std_logic;
+    op_receive : in std_logic
 );
 end component;
 
@@ -96,25 +109,25 @@ generic(
 	bit_precision : integer
 );
 port(
+    clk : in std_logic;
     input : in sfixed(mk(input_spec)'range);
-    output : out sfixed(mk(output_spec)'range)
+    output : out sfixed(mk(output_spec)'range);
+    op_send : out std_logic;
+    op_receive : in std_logic
 );
 end component;
 
+signal clk, rst_sink : std_logic;
+constant rst : std_logic := '0';
 
-constant in_a_raw : reals := (0.854777, 0.359746, 0.381410, 0.256412, 0.337901, 0.529125);
---signal out_a : std_logic_vector(4 * output_word_size  - 1 downto 0);
---signal clk, rst_sink : std_logic;
---constant rst : std_logic := '0';
-
-constant input_width1 : integer := 6;
-constant output_width1 : integer := 3;
-constant simd_width1 : integer := 2;
-constant input_spec1 : fixed_spec := (int => 1, frac => 7);
+constant input_width1 : integer := 6;--test_data.inputs'length;--
+constant output_width1 : integer := 3;--4;--test_data.biases'length;----
+constant simd_width1 : integer := 2;--14;----
+constant input_spec1 : fixed_spec := (int => 1, frac => 8);
 constant weight_spec1 : fixed_spec := (int => 4, frac => 4);
 constant bias_spec1 : fixed_spec := (int => 4, frac => 8);
-constant op_arg_spec1 : fixed_spec := (int => 4, frac => 8);
-constant output_spec1 : fixed_spec := (int => 4, frac => 8);
+constant op_arg_spec1 : fixed_spec := (int => 8, frac => 8);
+constant output_spec1 : fixed_spec := (int => 2, frac => 8); --(int => 8, frac => 0);
 
 signal ready1, done1, start1, ack1 : std_logic;
 signal in_a1 : std_logic_vector(input_width1 * size(input_spec1) - 1 downto 0);
@@ -123,13 +136,16 @@ signal out_offset1 : unsigned(bits_needed(output_width1) - 1 downto 0);
 signal op_result1_a : sfixed(mk(op_arg_spec1 + bias_spec1)'range);
 constant op_argument1_range : sfixed := mk(op_arg_spec1);
 signal op_argument1 : sfixed(op_argument1_range'range);
-constant op_result1_b_range : sfixed := mk(output_spec1);
+constant op_result1_b_range : sfixed := mk(op_arg_spec1);
 signal op_result1_b : sfixed(op_result1_b_range'range);
-signal op_result1_c : sfixed(op_result1_b_range'range);
+constant op_result1_c_range : sfixed := mk(output_spec1);
+signal op_result1_c : sfixed(op_result1_c_range'range);
+
+signal op_send1, op_send1_op1, op_receive1 : std_logic;
 
 signal done2 : std_logic;
 
-constant in_a_test_raw : reals := (
+constant in_a_test_raw : reals := (--test_data.inputs;
     0.270478, 0.808408, 0.463890, 0.291382, 0.800599, 0.203051
 );
 function to_vec(r : reals) return std_logic_vector is
@@ -142,28 +158,48 @@ begin
     return ret;
 end to_vec;
 
-constant ROM_weights1 : reals := (
+constant weight_values : reals := (--test_data.weights;
     1.306903, -0.160192, 1.903822, -2.190612, -2.675583, -2.811914,
     -2.602515, -0.059137, 2.729670, -1.089163, 2.633426, 0.004224,
     -0.800113, 1.111917, 1.625981, 1.330796, 0.119047, -2.141114
 );
+constant weights_filename : string := "C:\\Users\\gademb\\stage2017\\Gabriel\\nnet\\test_weights_small.txt.hex";
+impure function length_from_file(filename : string) return integer is
+    file weight_file : text;
+    variable cur_line : line;
+    variable length : std_logic_vector(32 - 1 downto 0);
+begin
+    file_open(weight_file, filename, read_mode);
+    readline(weight_file, cur_line);
+    hread(cur_line, length);
+    file_close(weight_file);
+    return to_integer(unsigned(length));
+end length_from_file;
+constant n_weights : integer := weight_values'length;--length_from_file(weights_filename);
 
-constant ROM_biases1 : reals := (
+constant ROM_biases1 : reals := (--test_data.biases;
     -0.932403, 1.964976, 0.849697
 );
 
 --signal clk_out_sig : std_logic := '0';
-	signal dummy : sfixed(-1 downto -8) := to_sfixed(0.0, 7, 0);
-begin
-    --to_integer(sel)
-    --test_out <= out_a1((2 + 1) * (output_int_part1 + output_frac_part1) - 1 downto 2 * (output_int_part1 + output_frac_part1));
+	--signal dummy : sfixed(-1 downto -8) := to_sfixed(0.0, 7, 0);
+    --signal interm_out : std_logic_vector(out_a1'range);
+begin 
+	--out_a <= out_a1;
+	--assert false report integer'image(mk(output_spec1)'length) severity failure;
+    --interm_out <= shift_range(std_logic_vector(get(out_a1, to_integer(sel), mk(output_spec1))), output_spec1.frac);--std_logic_vector(get(out_a1, to_integer(sel), mk(output_spec1)));
+    test_out <= shift_range(std_logic_vector(get(out_a1, to_integer(sel), mk(output_spec1))), output_spec1.frac)(test_out'range) when to_integer(sel) < output_width1 else "00000000";--out_a1(10 * (to_integer(sel) + 1) - 2 - 1 downto 10 * to_integer(sel)) when to_integer(sel) < 3 else "00000000";--
+    --test_out <= --out_a1(8 - 1 downto 0) when to_integer(sel) = 0 else
+    --            out_a1(8 * (to_integer(sel) + 1) - 1 downto 8 * to_integer(sel));-- when to_integer(sel) = 1 else
+                --out_a1(28 - 1 downto 20) when to_integer(sel) = 2 else
+                --"11111111";
     --clk_out <= clk_out_sig;
-	done <= done1;
+	--done <= done1;
 
---uPS : ps port map(
---    clk => clk,
---    rst => rst_sink
---);
+uPS : ps port map(
+    clk => clk,
+    rst => rst_sink
+);
 
 u0 : interlayer generic map(
     width => input_width1,
@@ -187,7 +223,9 @@ layer1 : fc_layer generic map(
     weight_spec => weight_spec1,
     op_arg_spec => op_arg_spec1,
     output_spec => output_spec1,
-    ROM_weights => ROM_weights1
+    weight_values => weight_values,
+    n_weights => n_weights,
+    weights_filename => weights_filename
 ) port map(
     clk => clk,
     rst => rst,
@@ -196,11 +234,14 @@ layer1 : fc_layer generic map(
     start => start1,
     ack => ack1,
     in_a => in_a1,
-    out_a => out_a,
+    out_a => out_a1,
     out_offset => out_offset1,
     op_argument => op_argument1,
-    op_result => op_result1_c
+    op_result => op_result1_c,--,
+    op_send => op_send1,
+    op_receive => op_receive1-- op_send1
 );
+	--op_result1_c <= resize(op_argument1, mk(output_spec1));
 --out_a <= out_a1;
 bias1 : bias_op generic map(
     input_spec => op_arg_spec1,
@@ -209,18 +250,23 @@ bias1 : bias_op generic map(
 ) port map(
     input => op_argument1,
     offset => out_offset1,
-    output => op_result1_a
+    output => op_result1_a,
+    op_send => op_send1_op1,
+    op_receive => op_send1
 );
-	op_result1_b <= resize(op_result1_a, mk(output_spec1));
+	op_result1_b <= resize(op_result1_a, mk(op_arg_spec1));
 	--op_result1_c <= op_result1_b;
 sig1 : sigmoid_op generic map(
-	input_spec => output_spec1,
+	input_spec => op_arg_spec1,
 	output_spec => output_spec1,
 	step_precision => 2,
 	bit_precision => 16
 ) port map(
+    clk => clk,
     input => op_result1_b,
-    output => op_result1_c
+    output => op_result1_c,
+    op_send => op_receive1,
+    op_receive => op_send1_op1
 );
 --relu1 : relu_op generic map(
 --    spec => output_spec1

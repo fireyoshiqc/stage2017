@@ -21,8 +21,11 @@ generic(
 	bit_precision : integer
 );
 port(
+    clk : in std_logic;
     input : in sfixed(mk(input_spec)'range);
-    output : out sfixed(mk(output_spec)'range)
+    output : out sfixed(mk(output_spec)'range);
+    op_send : out std_logic;
+    op_receive : in std_logic
 );
 end component;
 
@@ -32,7 +35,8 @@ end component;
 
 	signal input : sfixed(mk(input_spec)'range);
 	constant output_range : sfixed := mk(output_spec);
-    signal output : sfixed(output_range'range);
+    signal output : sfixed(output_range'range);	  
+	signal clk, op_send, op_receive : std_logic;
 
 	function sigmoid(x : real) return real is
 	begin
@@ -51,7 +55,11 @@ uut : sigmoid_op generic map (
 	step_precision => 1,
 	bit_precision => 16
 ) port map(
-	input => input, output => output
+	clk => clk,
+	input => input,
+	output => output,
+	op_send => op_send,
+	op_receive => op_receive
 );
 	
 process

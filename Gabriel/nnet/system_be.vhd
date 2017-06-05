@@ -1,8 +1,10 @@
 library ieee;
 use IEEE.STD_LOGIC_1164.ALL;
+use ieee.numeric_std.all;
 
 library work;
 use work.util.all;
+use work.test_data;
 
 entity system_be is
 generic(
@@ -14,20 +16,28 @@ end system_be;
 architecture system_be of system_be is	
 
 component system is
-port(
-    clk, rst, start : in std_logic;
-    ack, done : out std_logic;
-    out_a : out std_logic_vector(3 * 12  - 1 downto 0)
+port(clk, rst,
+    start : in std_logic;
+    --ack, done : out std_logic;
+    --in_a : in std_logic_vector(6 * 8 - 1 downto 0);
+    --out_a : out std_logic_vector(3 * 10  - 1 downto 0)
+    --in_a : in std_logic_vector(test_data.inputs'length * 9 - 1 downto 0);
+    out_a : out std_logic_vector(3 * 10  - 1 downto 0);
+    --test_out : out std_logic_vector(8 - 1 downto 0);
+    --clk_out : out std_logic;
+    sel : in unsigned(5 - 1 downto 0)--(8 - 1 downto 0)
 );
 end component;
 
-	signal clk, rst, start, done, ack : std_logic;
+	signal clk, rst, start : std_logic;--, done, ack : std_logic;
+	signal test_out : std_logic_vector(8 - 1 downto 0);
+	signal sel : unsigned(5 - 1 downto 0);
     --signal in_a : std_logic_vector(9 * input_word_size - 1 downto 0);
-    signal out_a : std_logic_vector(3 * 12  - 1 downto 0);
+    signal out_a : std_logic_vector(3 * 10  - 1 downto 0);
 begin
     
 uut : system port map(
-	clk, rst, start, ack, done, out_a
+	clk, rst, start, out_a, sel--ack, done, test_out
 );
 	
 process
@@ -36,6 +46,7 @@ begin
 	clk <= '0';
 	rst <= '0';
 	start <= '0';
+	sel <= "00001";
 	wait for p / 2;
 	clk <= '1';
 	wait for p / 2;
