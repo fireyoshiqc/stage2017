@@ -24,10 +24,9 @@ module maxpool_layer
     #(
     parameter integer bram_depth = 784,
     parameter integer pool_size = 2,
-    parameter integer input_width = 9,
-    parameter integer root = 3,
+    parameter integer input_size = 3,
     parameter integer stride = 1,
-    parameter integer max_res_size = ((root-pool_size)/stride + 1)
+    parameter integer max_res_size = ((input_size-pool_size)/stride + 1)
     )
     (
     input clk, ack, start,
@@ -48,14 +47,14 @@ module maxpool_layer
     integer clocked_i = 0;
     integer clocked_j = 0;
     //reg [7:0] max [max_res_size-1:0];
-    reg [7:0] image [input_width-1:0];
+    reg [7:0] image [input_size**2 -1:0];
     reg [2:0] operation = 0;
     reg [7:0] poolmax = 0;
     
     always @(posedge clk) begin
         case(operation)
             3'b000: begin // INITIALIZE
-                for (i=0; i < input_width; i = i + 1) begin
+                for (i=0; i < input_size**2; i = i + 1) begin
                     image[i] <= 0;
                 end
                 ready <= 1'b1;
@@ -66,7 +65,7 @@ module maxpool_layer
                 // THIS STATE IS NOT TO BE IMPLEMENTED UNLESS WE READ FROM BRAM
                  // BRAM LOAD
                // MUST OPTIMIZE ADDRESSING
-               image [clocked_i*root + clocked_j] <= din;
+               image [clocked_i*input_size + clocked_j] <= din;
                if (addr == 0) begin // LOSE A CLOCK CYCLE TO ALLOW BRAM TO KEEP UP
                    clocked_i <= clocked_i;
                    clocked_j <= clocked_j;
@@ -74,8 +73,8 @@ module maxpool_layer
                else begin
                        ;
                    
-                   if (clocked_i < root - 1) begin
-                       if (clocked_j < root - 1) begin
+                   if (clocked_i < input_size - 1) begin
+                       if (clocked_j < input_size - 1) begin
                            clocked_j = clocked_j + 1;   
                        end
                        else begin
@@ -84,7 +83,7 @@ module maxpool_layer
                        end
                    end
                    else begin
-                       if (clocked_j < root - 1) begin
+                       if (clocked_j < input_size - 1) begin
                            clocked_j = clocked_j + 1;
                        end
                        else begin
@@ -108,8 +107,8 @@ module maxpool_layer
                 
                 for (i=0; i < max_res_size; i = i + 1) begin
                     for (j=0; j < max_res_size; j = j + 1) begin
-                        if (image[((i*stride+clocked_i)*root+(j*stride)+clocked_j)] > dout) begin
-                            dout = image[((i*stride+clocked_i)*root+(j*stride)+clocked_j)];
+                        if (image[((i*stride+clocked_i)*input_size+(j*stride)+clocked_j)] > dout) begin
+                            dout = image[((i*stride+clocked_i)*input_size+(j*stride)+clocked_j)];
                         end
                     end
                 end
@@ -120,8 +119,8 @@ module maxpool_layer
 //                poolmax = 0;
 //                for (i=0; i < pool_size; i = i + 1) begin
 //                    for (j=0; j < pool_size; j = j + 1) begin
-//                        if (image[((clocked_i+i)*root+clocked_j+j)*8 +: 8] > poolmax) begin
-//                            poolmax = image[((clocked_i*stride+i)*root+(clocked_j*stride)+j)*8 +: 8];
+//                        if (image[((clocked_i+i)*input_size+clocked_j+j)*8 +: 8] > poolmax) begin
+//                            poolmax = image[((clocked_i*stride+i)*input_size+(clocked_j*stride)+j)*8 +: 8];
 //                        end
 //                        else begin
 //                            poolmax = poolmax;

@@ -28,13 +28,13 @@ module conv_layer
     parameter integer stride = 1,
     parameter integer filter_size = 2,
     parameter integer filter_nb = 1,
-    parameter integer input_width = 4,
-    parameter integer root = 2,
-    parameter integer conv_res_size = ((root+2*zero_padding-filter_size)/stride) + 1
+    parameter integer input_size = 2,
+    parameter integer channels = 1,
+    parameter integer conv_res_size = ((input_size+2*zero_padding-filter_size)/stride) + 1
     )
     (
     input clk, ack, start,
-    input [8 - 1 : 0] din,
+    input [channels * 8 - 1 : 0] din,
     input [filter_size**2*filter_nb*8-1 : 0] filters,
     input [filter_nb*8-1 : 0] biases,
     output done_w,
@@ -46,27 +46,20 @@ module conv_layer
     
     `include "functions.vh"
     
-
-    
-    //localparam integer dsp_iters = (filter_size**2 + (dsp_max - 1))/ dsp_max;
-    
     integer i = 0, j = 0;
     integer clocked_i = 0;
     integer clocked_j = 0;
     integer clocked_k = 0;
-    integer dsp_i = 0;
     
     reg done = 1'b0;
     reg ready = 1'b0;
     reg load_done = 1'b0;
-        //output reg [filter_nb*(clogb2(round_to_next_two(filter_size**2))+16)*(conv_res_size**2) - 1 : 0] out,
-        //output reg [8*filter_nb*conv_res_size**2 - 1 : 0] out,
-    reg [8 - 1 : 0] dout;
-    reg [clogb2(round_to_next_two(input_width))-1 : 0] addr = 0;
+    reg [filter_nb * 8 - 1 : 0] dout;
+    reg [clogb2(round_to_next_two(input_size**2))-1 : 0] addr = 0;
     
     reg [2:0] operation = 0;
-    reg [7:0] vram [input_width + 4*root*zero_padding + 4*zero_padding**2 - 1 : 0];
-    reg [7:0] conv_filter [filter_size**2 - 1 : 0];
+    reg [channels* 8 - 1:0] vram [input_size**2 + 4*input_size*zero_padding + 4*zero_padding**2 - 1 : 0];
+    reg [channels * 8 - 1:0] conv_filter [filter_size**2 - 1 : 0];
     reg [15:0] products [filter_size**2 - 1 : 0];
     reg [clogb2(round_to_next_two(filter_size**2))+16-1:0] sum = 0;
     
@@ -82,12 +75,9 @@ module conv_layer
     always @(posedge clk) begin
         case (operation)
             3'b000: begin   // INITIALIZE
-                for (i = 0; i<input_width + 4*root*zero_padding + 4*zero_padding**2; i = i+1) begin
+                for (i = 0; i<input_size**2 + 4*input_size*zero_padding + 4*zero_padding**2; i = i+1) begin
                     vram [i] <= 0;
                 end
-//                for (i = 0; i<conv_res_size**2 * filter_nb; i = i+1) begin
-//                    out [i*8 +: 8] <= 0;
-//                end
                 addr <= 0;
                 dout <= 0;
                 ready <= 1'b1;
@@ -99,15 +89,15 @@ module conv_layer
             3'b001: begin    // LOAD AND PAD INPUTS
                 // BRAM LOAD
                 // MUST OPTIMIZE ADDRESSING
-                vram [(clocked_i*(root+2*zero_padding) + clocked_j)] = din;
+                vram [(clocked_i*(input_size+2*zero_padding) + clocked_j)] = din;
                 
                 if (addr == 0) begin // LOSE A CLOCK CYCLE TO ALLOW BRAM TO KEEP UP
                     clocked_i <= clocked_i;
                     clocked_j <= clocked_j;
                 end
                 else begin
-                    if (clocked_i < root+zero_padding - 1) begin
-                        if (clocked_j < root+zero_padding - 1) begin
+                    if (clocked_i < input_size+zero_padding - 1) begin
+                        if (clocked_j < input_size+zero_padding - 1) begin
                             clocked_j = clocked_j + 1;   
                         end
                         else begin
@@ -116,7 +106,7 @@ module conv_layer
                         end
                     end
                     else begin
-                        if (clocked_j < root+zero_padding - 1) begin
+                        if (clocked_j < input_size+zero_padding - 1) begin
                             clocked_j = clocked_j + 1;
                         end
                         else begin
@@ -130,14 +120,12 @@ module conv_layer
                     end
                 end
                 
-                addr = addr + 1;
-
-                
+                addr = addr + 1;               
 
                 // ALL-AT-ONCE-LOAD
-//                for (i = zero_padding; i<root+zero_padding; i = i+1) begin
-//                    for (j = zero_padding; j<root+zero_padding; j = j+1) begin
-//                        vram [i*(root+2*zero_padding) + j] <= image[((i-zero_padding)*root + j - zero_padding)*8 +: 8];
+//                for (i = zero_padding; i<input_size+zero_padding; i = i+1) begin
+//                    for (j = zero_padding; j<input_size+zero_padding; j = j+1) begin
+//                        vram [i*(input_size+2*zero_padding) + j] <= image[((i-zero_padding)*input_size + j - zero_padding)*8 +: 8];
 //                    end
 //                end
 //                i <= 0;
@@ -157,13 +145,9 @@ module conv_layer
                 operation = 3'b011;
             end
             3'b011: begin    // CONVOLVE FILTER
-            
-                
-            
-            
                 for (i = 0; i < filter_size; i = i + 1) begin
                     for (j = 0; j < filter_size; j = j + 1) begin
-                        products [i*filter_size+j] = vram[(i+clocked_i*stride)*(root+2*zero_padding)+(j+clocked_j*stride)]
+                        products [i*filter_size+j] = vram[(i+clocked_i*stride)*(input_size+2*zero_padding)+(j+clocked_j*stride)]
                         * conv_filter[i*filter_size+j];
                         sum = sum + products[i*filter_size+j];
                     end

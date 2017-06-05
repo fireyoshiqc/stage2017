@@ -29,8 +29,8 @@ module top_nn #(
     parameter integer c1filter_nb = 1,
     parameter integer c2filter_size = 2,
     parameter integer c2filter_nb = 1,
-    parameter integer c1input_width = 9,
-    parameter integer c2input_width = 16
+    parameter integer c1input_size = 3,
+    parameter integer c2input_size = 4
     )
     (
     input clk,
@@ -64,8 +64,7 @@ module top_nn #(
         .stride(c1stride),
         .filter_size(c1filter_size),
         .filter_nb(c1filter_nb),
-        .input_width(c1input_width),
-        .root(3)
+        .input_size(c1input_size)
         )
         conv1
         (
@@ -106,8 +105,7 @@ module top_nn #(
         .stride(c2stride),
         .filter_size(c2filter_size),
         .filter_nb(c2filter_nb),
-        .input_width(c2input_width),
-        .root(4)
+        .input_size(c2input_size)
         )
         conv2
         (
@@ -147,7 +145,7 @@ module top_nn #(
     maxpool_layer #(
         .pool_size(2),
         .input_width(9),
-        .root(3),
+        .input_size(3),
         .stride(1)
         )
         max1
