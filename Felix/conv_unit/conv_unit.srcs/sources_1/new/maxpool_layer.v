@@ -26,6 +26,7 @@ module maxpool_layer
     parameter integer pool_size = 2,
     parameter integer input_size = 3,
     parameter integer stride = 1,
+    parameter integer channels = 1,
     parameter integer max_res_size = ((input_size-pool_size)/stride + 1)
     )
     (
@@ -46,6 +47,7 @@ module maxpool_layer
     integer j = 0;
     integer clocked_i = 0;
     integer clocked_j = 0;
+    integer clocked_channel = 0;
     //reg [7:0] max [max_res_size-1:0];
     reg [7:0] image [input_size**2 -1:0];
     reg [2:0] operation = 0;
@@ -71,7 +73,6 @@ module maxpool_layer
                    clocked_j <= clocked_j;
                end
                else begin
-                       ;
                    
                    if (clocked_i < input_size - 1) begin
                        if (clocked_j < input_size - 1) begin
