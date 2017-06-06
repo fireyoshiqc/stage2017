@@ -52,14 +52,14 @@ module maxpool_layer_mc
     integer clocked_channel = 0;
     reg [2:0] operation = 0;
     
-    reg [8*channels - 1:0] tempram [15:0];
+//    reg [8*channels - 1:0] tempram [15:0];
     
     always @(posedge clk) begin
         case(operation)
             3'b000: begin // INITIALIZE
-                for (channel=0; channel < input_size**2; channel = channel + 1) begin
-                    tempram[channel] <= 639852 - 872*channel;
-                end
+//                for (channel=0; channel < input_size**2; channel = channel + 1) begin
+//                    tempram[channel] <= 639852 - 872*channel;
+//                end
                 ready <= 1'b1;
                 done <= 1'b0;
                 operation <= 3'b101;
@@ -80,10 +80,10 @@ module maxpool_layer_mc
                 end
                 
                 for (channel=0; channel<channels; channel = channel + 1) begin
-                    if (tempram[addr][channel*8 +: 8] > dout[channel*8 +: 8]) begin
-                        dout[channel*8 +: 8] = tempram[addr][channel*8 +: 8];
-//                    if (din[channel*8 +: 8] > dout[channel*8 +: 8]) begin
-                        //dout[channel*8 +: 8] <= din[channel*8 +: 8];
+//                    if (tempram[addr][channel*8 +: 8] > dout[channel*8 +: 8]) begin
+//                        dout[channel*8 +: 8] = tempram[addr][channel*8 +: 8];
+                    if (din[channel*8 +: 8] > dout[channel*8 +: 8]) begin
+                        dout[channel*8 +: 8] <= din[channel*8 +: 8];
                     end
                 end
                 
@@ -130,6 +130,7 @@ module maxpool_layer_mc
                                 max_j = 0;
                                 max_i = 0;
                                 operation = 3'b100;
+                                load_done <= 1'b1;
                             end
                         end
                         

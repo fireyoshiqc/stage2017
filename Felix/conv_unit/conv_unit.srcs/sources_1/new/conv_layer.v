@@ -41,7 +41,8 @@ module conv_layer
     output ready_w,
     output load_done_w,
     output [8 - 1 : 0] dout_w,
-    output [clogb2(round_to_next_two(bram_depth))-1 : 0] addr_w
+    output [clogb2(round_to_next_two(bram_depth))-1 : 0] addr_w,
+    output reg [clogb2(round_to_next_two(input_size))-1 : 0] row = 0
     );
     
     `include "functions.vh"
@@ -170,6 +171,7 @@ module conv_layer
                     else begin
                         clocked_j <= 0;
                         clocked_i <= clocked_i + 1;
+                        row <= row + 1;
                     end
                 end
                 else begin
@@ -179,6 +181,7 @@ module conv_layer
                     else begin
                         clocked_i <= 0;
                         clocked_j <= 0;
+                        row <= 0;
                         operation = 3'b010;
                         if (clocked_k < filter_nb-1) begin
                             clocked_k <= clocked_k + 1;

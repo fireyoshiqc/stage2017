@@ -22,7 +22,7 @@
 
 module top_nn #(
     parameter integer c1padding = 1,
-    parameter integer c2padding = 1,
+    parameter integer c2padding = 0,
     parameter integer c1stride = 1,
     parameter integer c2stride = 2,
     parameter integer c1filter_size = 2,
@@ -30,7 +30,7 @@ module top_nn #(
     parameter integer c2filter_size = 2,
     parameter integer c2filter_nb = 1,
     parameter integer c1input_size = 3,
-    parameter integer c2input_size = 4
+    parameter integer c2input_size = 6
     )
     (
     input clk,
@@ -43,7 +43,8 @@ module top_nn #(
     output ready,
     output lddone,
     output done,
-    output [7:0] dout
+    output [7:0] dout,
+    output [clogb2(round_to_next_two(784))-1 : 0] out_addr
     );
     
     wire c2ackc1;
@@ -56,6 +57,7 @@ module top_nn #(
     wire c2readyb1;
     wire [7:0] b1doutc2;
     wire b1startc2;
+    wire [1:0] c1rowb1;
     
     `include "functions.vh"
     
@@ -78,11 +80,13 @@ module top_nn #(
         .ready_w(ready),
         .load_done_w(lddone),
         .dout_w(c1dinb1),
-        .addr_w(c1addrb1)
+        .addr_w(c1addrb1),
+        .row(c1rowb1)
         );
         
-    bram_interlayer #(
-        
+    bram_pad_interlayer #(
+        .zero_padding(1),
+        .layer_size(4)
         )
         bram1
         (
@@ -93,7 +97,8 @@ module top_nn #(
         .rd_addr(c2addrb1),
         .din(c1dinb1),
         .dout(b1doutc2),
-        .start(b1startc2)
+        .start(b1startc2),
+        .row(c1rowb1)
         );
     
     wire c2doneb2;
@@ -142,11 +147,11 @@ module top_nn #(
         .start(b2startm1)
         );
         
-    maxpool_layer #(
+    maxpool_layer_mc #(
         .pool_size(2),
-        .input_width(9),
         .input_size(3),
-        .stride(1)
+        .stride(1),
+        .channels(1)
         )
         max1
         (
@@ -158,7 +163,8 @@ module top_nn #(
         .ready(m1readyb2),
         .done(done),
         .load_done(m1ackc2),
-        .addr(m1addrb2)
+        .addr(m1addrb2),
+        .out_addr(out_addr)
         );
     
 endmodule
