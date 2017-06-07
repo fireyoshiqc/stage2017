@@ -9,6 +9,7 @@ use ieee_proposed.fixed_pkg.all;
 
 library work;
 use work.util.all;
+use work.fc_computation_defs.all;
 use work.test_data;
 
 entity system is
@@ -126,7 +127,7 @@ constant simd_width1 : integer := 2;--14;----
 constant input_spec1 : fixed_spec := (int => 1, frac => 8);
 constant weight_spec1 : fixed_spec := (int => 4, frac => 4);
 constant bias_spec1 : fixed_spec := (int => 4, frac => 8);
-constant op_arg_spec1 : fixed_spec := (int => 8, frac => 8);
+constant op_arg_spec1 : fixed_spec := post_reduce_spec(input_spec1, weight_spec1, input_width1, simd_width1);--(int => 8, frac => 8);
 constant output_spec1 : fixed_spec := (int => 2, frac => 8); --(int => 8, frac => 0);
 
 signal ready1, done1, start1, ack1 : std_logic;
