@@ -42,7 +42,7 @@ module conv_layer
     output load_done_w,
     output [8 - 1 : 0] dout_w,
     output [clogb2(round_to_next_two(bram_depth))-1 : 0] addr_w,
-    output reg [clogb2(round_to_next_two(input_size))-1 : 0] row = 0,
+    output reg [clogb2(round_to_next_two(conv_res_size))-1 : 0] row = 0,
     output reg wren = 0
     );
     
@@ -57,7 +57,7 @@ module conv_layer
     reg ready = 1'b0;
     reg load_done = 1'b0;
     reg [filter_nb * 8 - 1 : 0] dout;
-    reg [clogb2(round_to_next_two(input_size**2))-1 : 0] addr = 0;
+    reg [clogb2(round_to_next_two(bram_depth))-1 : 0] addr = 0;
     
     reg [2:0] operation = 0;
     reg [channels* 8 - 1:0] vram [input_size**2 + 4*input_size*zero_padding + 4*zero_padding**2 - 1 : 0];
@@ -145,9 +145,10 @@ module conv_layer
                 done <= 1'b0;
                 load_done <= 1'b1;
                 operation = 3'b011;
-                wren <= 1;
+                
             end
             3'b011: begin    // CONVOLVE FILTER
+                wren <= 1;
                 for (i = 0; i < filter_size; i = i + 1) begin
                     for (j = 0; j < filter_size; j = j + 1) begin
                         products [i*filter_size+j] = vram[(i+clocked_i*stride)*(input_size+2*zero_padding)+(j+clocked_j*stride)]

@@ -29,8 +29,23 @@ module top_nn_tb(
     wire ready, lddone, done;
     wire [7:0] dout;
     wire [9:0] out_addr;
+    wire start_end;
     
-    top_nn uut (
+    top_nn #(
+        .input_size(5),
+        .c1padding(0),
+        .c2padding(1),
+        .c1stride(1),
+        .c2stride(1),
+        .m1stride(1),
+        .c1filter_size(2),
+        .c1filter_nb(1),
+        .c2filter_size(2),
+        .c2filter_nb(1),
+        .m1pool_size(2)
+        )
+        uut 
+        (
         .clk(clk),
         .start(1'b1),
         .din(din),
@@ -42,7 +57,8 @@ module top_nn_tb(
         .lddone(lddone),
         .done(done),
         .dout(dout),
-        .out_addr(out_addr)
+        .out_addr(out_addr),
+        .start_end(start_end)
         );
         
         always begin

@@ -40,7 +40,8 @@ module maxpool_layer_mc
     output reg ready = 1'b0,
     output reg load_done = 1'b0,
     output reg [clogb2(round_to_next_two(bram_depth))-1 : 0] addr = 0,
-    output reg [clogb2(round_to_next_two(bram_depth))-1 : 0] out_addr = 0
+    output reg [clogb2(round_to_next_two(bram_depth))-1 : 0] out_addr = 0,
+    output reg wren = 1'b0
     );
     
     `include "functions.vh"
@@ -85,28 +86,41 @@ module maxpool_layer_mc
 //                    addr = addr + 1;
 //                end
                 
-                if (clocked_i == 0 &&clocked_j == 1) begin //LOSE A CLOCK CYCLE TO ALLOW BRAM TO KEEP UP
+                
+                
+                if (clocked_i == 1'b0 && clocked_j == 1'b1) begin //LOSE A CLOCK CYCLE TO ALLOW BRAM TO KEEP UP
 //                    if (max_i == 0 && max_j == 0) begin
 //                        out_addr = 0;
 //                    end
 //                    else begin
 //                        out_addr = out_addr + 1;
 //                    end
+                    if (max_i > 0 || max_j > 0) begin
+                        wren <= 1; // Enable writes
+                    end
+                    else begin
+                        wren <= 0;
+                    end
                     
                     dout = max;
                     max = 0;
                 end
                 else if (clocked_i*pool_size + clocked_j == 2) begin
+                   
                     if (max_i == 0 && max_j == 0) begin
                         out_addr <= out_addr;
                     end
-                    else if (load_done) begin
-                        operation = 3'b100;
-                    end
+                    
                     else begin
                         out_addr <= out_addr + 1;
                     end
                 end
+//                if (load_done) begin
+//                    operation = 3'b100;
+//                end
+//                else begin
+//                    operation =
+//                end
                 
                 if (clocked_i < pool_size - 1) begin
                     if (clocked_j < pool_size-1) begin
@@ -115,6 +129,7 @@ module maxpool_layer_mc
                     else begin
                         clocked_j = 0;
                         clocked_i = clocked_i + 1;
+                        
                         
                         //addr = addr + input_size - 1; 
                     end
@@ -125,7 +140,7 @@ module maxpool_layer_mc
                         //addr = addr + 1;
                     end
                     else begin
-
+                        
                         clocked_i = 0;
                         clocked_j = 0;
                         
@@ -150,6 +165,7 @@ module maxpool_layer_mc
                                 max_j = 0;
                                 max_i = 0;
                                 load_done <= 1'b1;
+                                operation <= 3'b100;
                             end
                         end
                         
@@ -186,6 +202,11 @@ module maxpool_layer_mc
             
             3'b100: begin // DONE (WAIT)
                 addr <= 0;
+                wren <= 0;
+                max_j <= 0;
+                max_i <= 0;
+                clocked_j <= 0;
+                clocked_i <= 0;
                 if (ack) begin // TO READY
                     operation <= 3'b101;
                     ready <= 1'b1;

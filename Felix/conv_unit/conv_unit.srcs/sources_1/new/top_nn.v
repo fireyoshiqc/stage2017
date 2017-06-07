@@ -23,14 +23,16 @@
 module top_nn #(
     parameter integer c1padding = 0,
     parameter integer c2padding = 0,
+    parameter integer m1padding = 0,
     parameter integer c1stride = 1,
-    parameter integer c2stride = 2,
+    parameter integer c2stride = 1,
+    parameter integer m1stride = 1,
     parameter integer c1filter_size = 2,
     parameter integer c1filter_nb = 1,
     parameter integer c2filter_size = 2,
     parameter integer c2filter_nb = 1,
-    parameter integer c1input_size = 5,
-    parameter integer c2input_size = 6
+    parameter integer input_size = 3,
+    parameter integer m1pool_size = 2
     )
     (
     input clk,
@@ -43,6 +45,7 @@ module top_nn #(
     output ready,
     output lddone,
     output done,
+    output start_end,
     output [7:0] dout,
     output [clogb2(round_to_next_two(784))-1 : 0] out_addr
     );
@@ -67,7 +70,7 @@ module top_nn #(
         .stride(c1stride),
         .filter_size(c1filter_size),
         .filter_nb(c1filter_nb),
-        .input_size(c1input_size)
+        .input_size(input_size)
         )
         conv1
         (
@@ -86,9 +89,11 @@ module top_nn #(
         .wren(c1wrenb1)
         );
         
+    localparam integer b1size = ((input_size+2*c1padding-c1filter_size)/c1stride) + 1;
+        
     bram_pad_interlayer #(
-        .zero_padding(1),
-        .layer_size(4)
+        .zero_padding(c2padding),
+        .layer_size(((input_size+2*c1padding-c2filter_size)/c2stride) + 1)
         )
         bram1
         (
@@ -107,15 +112,17 @@ module top_nn #(
     wire c2doneb2;
     wire [7:0] c2dinb2;
     wire m1ackc2;
-    wire [1:0] c2rowb2;
+    wire [2:0] c2rowb2;
     wire c2wrenb2;
+    
+    localparam integer c2size = b1size + 2*c2padding;
         
     conv_layer #(
-        .zero_padding(c2padding),
+        .zero_padding(0),
         .stride(c2stride),
         .filter_size(c2filter_size),
         .filter_nb(c2filter_nb),
-        .input_size(c2input_size)
+        .input_size(c2size)
         )
         conv2
         (
@@ -138,10 +145,12 @@ module top_nn #(
     wire [9:0] m1addrb2;
     wire [7:0] b2doutm1;
     wire b2startm1;
+    
+    localparam b2size = ((c2size+2*0-c2filter_size)/c2stride) + 1;
         
     bram_pad_interlayer #(
         .zero_padding(0),
-        .layer_size(3)
+        .layer_size(b2size)
         
         )
         bram2
@@ -158,9 +167,15 @@ module top_nn #(
         .wren(c2wrenb2)
         );
         
+        wire m1doneb3;
+        wire [7:0] m1dinb3;
+        wire [1:0] m1rowb3;
+        wire m1wrenb3;
+        wire [9:0] m1addrb3;
+    
     maxpool_layer_mc #(
         .pool_size(2),
-        .input_size(3),
+        .input_size(b2size),
         .stride(1),
         .channels(1)
         )
@@ -170,12 +185,35 @@ module top_nn #(
         .ack(1'b1),
         .start(b2startm1),
         .din(b2doutm1),
-        .dout(dout),
+        .dout(m1dinb3),
         .ready(m1readyb2),
-        .done(done),
+        .done(m1doneb3),
         .load_done(m1ackc2),
         .addr(m1addrb2),
-        .out_addr(out_addr)
+        .out_addr(m1addrb3),
+        .wren(m1wrenb3)
         );
+       
+     localparam b3size = ((b2size - m1pool_size)/m1stride) + 1;
+        
+     bram_pad_interlayer #(
+       .zero_padding(0),
+       .layer_size(b3size),
+       .pool_size(m1pool_size)
+       
+       )
+       bram3
+       (
+       .clk(clk),
+       .done(m1doneb3),
+       .ready(1'b1),
+       .wr_addr(m1addrb3),
+       .rd_addr(0),
+       .din(m1dinb3),
+       .dout(dout),
+       .start(start_end),
+       .row(0),
+       .wren(m1wrenb3)
+       );
     
 endmodule
