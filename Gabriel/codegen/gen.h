@@ -77,14 +77,14 @@ data_type string_type("string", false, +[](const polyvalue& v){
     return v.str;
 });
 data_type fixed_spec_type("fixed_spec", false, +[](const polyvalue& v){
-    return "fixed_spec'(int => " + to_string(int(v[0])) + ", frac => " + to_string(int(v[1])) + ")";
+    return "fixed_spec(fixed_spec'(int => " + to_string(int(v[0])) + ", frac => " + to_string(int(v[1])) + "))";
 });
 data_type reals_type("reals", false, +[](const polyvalue& v){
     stringstream ss;
-    ss << "reals'( ";
+    ss << "reals(reals'( ";
     for (size_t i = 0, sz = v.num.size(); i < sz; ++i)
         ss << fixed << setprecision(7) << v[i] << (i < sz - 1 ? ", " : "");
-    ss << ')';
+    ss << "))";
     return ss.str();
 });
 data_type std_logic_vector_type("std_logic_vector", true);
@@ -153,7 +153,7 @@ struct component
         for (datum& p : this->port)
             p.plugged_signal_name = p.sem == Sem::clock ? "clk" :
                                     p.sem == Sem::reset ? "rst" :
-                                                          p.name + "_u" + to_string(global_counter());
+                                                          p.name + "_s" + to_string(global_counter());
     }
     virtual ~component() {}
     virtual void propagate(component& prev) {};
@@ -205,15 +205,14 @@ end component;
 
 void system::propagate()
 {
-    for (size_t i = 0; i < components.size() - 1; ++i)//(component* cur = start(); cur->next != nullptr; cur = cur->next)
+    for (size_t i = 0; i < components.size() - 1; ++i)
         components[i + 1]->propagate(*components[i]);
 }
 
 string system::chain_main()
 {
     stringstream ss;
-    //component* cur = start();
-    for (size_t i = 0; i < components.size() - 1; ++i){//(; cur->next != nullptr; cur = cur->next){
+    for (size_t i = 0; i < components.size() - 1; ++i){
         ss << components[i + 1]->demand_signal(Sem::main_input) << " <= " << components[i]->demand_signal(Sem::main_output) << ";\n"
            << components[i]->demand_signal(Sem::sig_in_front) << " <= " << components[i + 1]->demand_signal(Sem::sig_out_back) << ";\n"
            << components[i + 1]->demand_signal(Sem::sig_in_back) << " <= " << components[i]->demand_signal(Sem::sig_out_front) << ";\n"
@@ -227,7 +226,7 @@ string system::chain_side()
 {
     stringstream ss;
     component* cur = start();
-    for (size_t i = 0; i < components.size() - 1; ++i){//(; cur->next != nullptr; cur = cur->next){
+    for (size_t i = 0; i < components.size() - 1; ++i){
         ss << components[i + 1]->demand_signal(Sem::main_input) << " <= " << components[i]->demand_signal(Sem::main_output) << ";\n"
            << components[i + 1]->demand_signal(Sem::sig_in_back) << " <= " << components[i]->demand_signal(Sem::sig_out_front) << ";\n"
            << components[i]->chain_internal();
@@ -362,9 +361,9 @@ struct fc_layer_component : public component
     virtual string chain_internal()
     {
         stringstream ss;
-        ss << demand_signal(Sem::main_input) << " <= " << prepended->demand_signal(Sem::main_output) << ";\n"
-           << demand_signal(Sem::sig_in_back) << " <= " << prepended->demand_signal(Sem::sig_out_front) << ";\n"
-           << prepended->demand_signal(Sem::sig_in_front) << " <= " << demand_signal(Sem::sig_out_back) << ";\n";
+        ss << find_by(port, Sem::main_input).plugged_signal_name << " <= " << prepended->demand_signal(Sem::main_output) << ";\n"
+           << find_by(port, Sem::sig_in_back).plugged_signal_name << " <= " << prepended->demand_signal(Sem::sig_out_front) << ";\n"
+           << prepended->demand_signal(Sem::sig_in_front) << " <= " << find_by(port, Sem::sig_out_back).plugged_signal_name << ";\n";
         if (subsystem){
             component* start = subsystem->start(), * last = subsystem->last();
             ss << start->demand_signal(Sem::main_input) << " <= " << demand_signal(Sem::side_output) << ";\n"
@@ -372,12 +371,12 @@ struct fc_layer_component : public component
                << demand_signal(Sem::side_input) << " <= " << last->demand_signal(Sem::main_output) << ";\n"
                << demand_signal(Sem::sig_in_side) << " <= " << last->demand_signal(Sem::sig_out_front) << ";\n"
                << subsystem->chain_side();
-            for (auto&& cur : subsystem->components)//(component* cur = start; cur != nullptr; cur = cur->next)
+            for (auto&& cur : subsystem->components)
                 if (!find_by(cur->port, Sem::offset_intake).is_invalid())
                     ss << cur->demand_signal(Sem::offset_intake) << " <= " << demand_signal(Sem::offset_outtake) << ";\n";
-            ss << demand_signal(Sem::side_input) << " <= resize(" << last->demand_signal(Sem::main_output) << ", " << find_by(generic, Sem::output_spec).formatted_value() << ");\n";
+            ss << demand_signal(Sem::side_input) << " <= resize(" << last->demand_signal(Sem::main_output) << ", mk(" << find_by(generic, Sem::output_spec).formatted_value() << "));\n";
         } else
-            ss << demand_signal(Sem::side_input) << " <= resize(" << demand_signal(Sem::side_output) << ", " << find_by(generic, Sem::output_spec).formatted_value() << ");\n";
+            ss << demand_signal(Sem::side_input) << " <= resize(" << demand_signal(Sem::side_output) << ", mk(" << find_by(generic, Sem::output_spec).formatted_value() << "));\n";
         return ss.str();
     };
 };
@@ -394,8 +393,8 @@ struct bias_op_component : public component
             datum("input",      sfixed_type,                                                 Sem::main_input)   .in(),
             datum("offset",     unsigned_type.with_range(bits_needed(biases.size()) - 1, 0), Sem::offset_intake).in(),
             datum("output",     sfixed_type,                                                 Sem::main_output)  .out(),
-            datum("op_send",    std_logic_type,                                              Sem::sig_in_back)  .out(),
-            datum("op_receive", std_logic_type,                                              Sem::sig_out_front).in(),
+            datum("op_send",    std_logic_type,                                              Sem::sig_out_front)  .out(),
+            datum("op_receive", std_logic_type,                                              Sem::sig_in_back).in(),
         }) {}
     virtual void propagate(component& prev)
     {
@@ -428,8 +427,8 @@ struct sigmoid_op_component : public component
             datum("clk",        std_logic_type,                                         Sem::clock)        .in(),
             datum("input",      sfixed_type,                                            Sem::main_input)   .in(),
             datum("output",     sfixed_type.with_range(ospec.first - 1, -ospec.second), Sem::main_output)  .out(),
-            datum("op_send",    std_logic_type,                                         Sem::sig_in_back)  .out(),
-            datum("op_receive", std_logic_type,                                         Sem::sig_out_front).in(),
+            datum("op_send",    std_logic_type,                                         Sem::sig_out_front)  .out(),
+            datum("op_receive", std_logic_type,                                         Sem::sig_in_back).in(),
         }) {}
     virtual void propagate(component& prev)
     {
@@ -502,11 +501,33 @@ R"(    clk : in std_logic;
     virtual string architecture_body(system& s)
     {
         stringstream ss;
-        ss << "in_a <= " << s.start()->demand_signal(Sem::main_input) << ";\n"
+        ss << s.start()->demand_signal(Sem::sig_in_back) << " <= start;\n"
+           << "ready <= " << s.start()->demand_signal(Sem::sig_out_back) << ";\n"
+           << s.last()->demand_signal(Sem::sig_in_front) << " <= ack;\n"
+           << "done <= " << s.last()->demand_signal(Sem::sig_out_front) << ";\n"
+           << s.start()->demand_signal(Sem::main_input) << " <= in_a;\n"
            << "out_a <= " << s.last()->demand_signal(Sem::main_output) << ";";
         return ss.str();
     }
 };
+
+string to_vec_function_def(system& s)
+{
+    stringstream ss;
+    ss <<
+R"(function to_vec(r : reals) return std_logic_vector is
+    constant input_spec : fixed_spec := )" << find_by(s.start()->generic, Sem::input_spec).formatted_value() << R"(;
+    variable ret : std_logic_vector()" << find_by(s.start()->generic, Sem::input_width).value[0] << R"( * size(input_spec) - 1 downto 0);
+begin
+    for i in r'range loop
+        ret((1 + i) * size(input_spec) - 1 downto i * size(input_spec)) :=
+            std_logic_vector(to_sfixed(r(i), mk(input_spec)));
+    end loop;
+    return ret;
+end to_vec;
+)";
+    return ss.str();
+}
 
 struct sim_interface : public system_interface
 {
@@ -524,19 +545,7 @@ R"(    clk : in std_logic;
     }
     virtual string architecture_preface(system& s)
     {
-        stringstream ss;
-        ss <<
-R"(function to_vec(r : reals) return std_logic_vector is
-    variable ret : std_logic_vector(input_width1 * size(input_spec1) - 1 downto 0);
-begin
-    for i in in_a_test_raw'range loop
-        ret((1 + i) * size(input_spec1) - 1 downto i * size(input_spec1)) :=
-            std_logic_vector(to_sfixed(in_a_test_raw(i), mk(input_spec1)));
-    end loop;
-    return ret;
-end to_vec;
-)";
-        return ss.str();
+        return to_vec_function_def(s);
     }
     virtual string architecture_body(system& s)
     {
@@ -545,6 +554,7 @@ end to_vec;
         for (size_t i = 0, sz = test_input.size(); i < sz; ++i)
             ss << fixed << setprecision(7) << test_input[i] << (i < sz - 1 ? ", " : "");
         ss << "));\n"
+           << s.start()->demand_signal(Sem::sig_in_back) << " <= start;\n"
               "out_a <= " << s.last()->demand_signal(Sem::main_output) << ";";
         return ss.str();
     }
@@ -577,16 +587,7 @@ end component;
 signal clk, rst_sink : std_logic;
 constant rst : std_logic := '0';
 
-function to_vec(r : reals) return std_logic_vector is
-    variable ret : std_logic_vector(input_width1 * size(input_spec1) - 1 downto 0);
-begin
-    for i in in_a_test_raw'range loop
-        ret((1 + i) * size(input_spec1) - 1 downto i * size(input_spec1)) :=
-            std_logic_vector(to_sfixed(in_a_test_raw(i), mk(input_spec1)));
-    end loop;
-    return ret;
-end to_vec;
-)";
+)" << to_vec_function_def(s);
         return ss.str();
     }
     virtual string architecture_body(system& s)
@@ -604,7 +605,8 @@ R"(uPS : ps port map(
         datum& output_spec = find_by(s.last()->generic, Sem::output_spec);
         datum& output_width = find_by(s.last()->generic, Sem::output_width);
         ss << "));\n"
-              "test_out <= shift_range(std_logic_vector(get(" << s.last()->demand_signal(Sem::main_output) << ", to_integer(sel), " << output_spec.formatted_value() << ")), " << int(output_spec.value[1]) << ")(test_out'range) when to_integer(sel) < " << size_t(output_width.value[0]) << R"( else "00000000";)";
+           << s.start()->demand_signal(Sem::sig_in_back) << " <= start;\n"
+              "test_out <= shift_range(std_logic_vector(get(" << s.last()->demand_signal(Sem::main_output) << ", to_integer(sel), mk(" << output_spec.formatted_value() << "))), " << int(output_spec.value[1]) << ")(test_out'range) when to_integer(sel) < " << size_t(output_width.value[0]) << R"( else "00000000";)";
         return ss.str();
     }
     vector<double> test_input;
