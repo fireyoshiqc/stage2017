@@ -42,7 +42,8 @@ module conv_layer
     output load_done_w,
     output [8 - 1 : 0] dout_w,
     output [clogb2(round_to_next_two(bram_depth))-1 : 0] addr_w,
-    output reg [clogb2(round_to_next_two(input_size))-1 : 0] row = 0
+    output reg [clogb2(round_to_next_two(input_size))-1 : 0] row = 0,
+    output reg wren = 0
     );
     
     `include "functions.vh"
@@ -144,6 +145,7 @@ module conv_layer
                 done <= 1'b0;
                 load_done <= 1'b1;
                 operation = 3'b011;
+                wren <= 1;
             end
             3'b011: begin    // CONVOLVE FILTER
                 for (i = 0; i < filter_size; i = i + 1) begin
@@ -158,8 +160,16 @@ module conv_layer
 //                = sum[(clogb2(round_to_next_two(filter_size**2))+16)-1 -: 8] ;
                 dout = sum[(clogb2(round_to_next_two(filter_size**2))+16)-1 -: 8]+sum[(clogb2(round_to_next_two(filter_size**2))+8)-1];
                 sum = 0;
-                if (clocked_i == 0 && clocked_j == 0) begin
-                    addr = 0;
+                if (clocked_j == 0) begin
+                    row = row + 1;
+                    
+                    if (clocked_i == 0) begin
+                        addr = 0;
+                        row = 0;
+                    end
+                    else begin
+                        addr = addr + 1;
+                    end
                 end
                 else begin
                     addr = addr + 1;
@@ -171,7 +181,6 @@ module conv_layer
                     else begin
                         clocked_j <= 0;
                         clocked_i <= clocked_i + 1;
-                        row <= row + 1;
                     end
                 end
                 else begin
@@ -181,8 +190,8 @@ module conv_layer
                     else begin
                         clocked_i <= 0;
                         clocked_j <= 0;
-                        row <= 0;
-                        operation = 3'b010;
+
+
                         if (clocked_k < filter_nb-1) begin
                             clocked_k <= clocked_k + 1;
                             operation <= 3'b010;
@@ -191,13 +200,16 @@ module conv_layer
                         end
                         else begin
                             clocked_k <= 0;
-                            operation <= 3'b100;
+                            operation <= 3'b100;                     
                         end
                     end
                 end
             end
             3'b100: begin // DONE (WAIT)
                 addr <= 0;
+                dout <= 0;
+                row <= 0;
+                wren <= 0; 
                 if (ack) begin // TO READY
                     operation <= 3'b101;
                     ready <= 1'b1;

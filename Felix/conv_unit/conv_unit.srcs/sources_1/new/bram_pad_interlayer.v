@@ -28,7 +28,7 @@ module bram_pad_interlayer
     parameter integer layer_size = 2 //WITHOUT PADDING
     )
     (
-    input clk, done, ready,
+    input clk, done, ready, wren,
     input [clogb2(round_to_next_two(data_depth))-1 : 0] wr_addr,
     input [clogb2(round_to_next_two(data_depth))-1 : 0] rd_addr,
     input [data_width-1:0] din,
@@ -38,7 +38,7 @@ module bram_pad_interlayer
     );
 
     reg [data_width-1:0] bram [round_to_next_two(data_depth)-1:0];
-    wire wren = ~done;
+    //wire wren = ~done;
     
     
     `include "functions.vh"
@@ -54,7 +54,7 @@ module bram_pad_interlayer
         end
         else begin
             dout <= bram[rd_addr];
-            start <= ready;
+            start <= ready & done;
         end
     end
 
