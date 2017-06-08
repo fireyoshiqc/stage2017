@@ -50,6 +50,8 @@ module top_nn #(
     output [clogb2(round_to_next_two(784))-1 : 0] out_addr
     );
     
+    localparam integer b1size = ((input_size+2*c1padding-c1filter_size)/c1stride) + 1;
+    
     wire c2ackc1;
     wire c1doneb1;
     wire [7:0] c1dinb1;
@@ -60,7 +62,7 @@ module top_nn #(
     wire c2readyb1;
     wire [7:0] b1doutc2;
     wire b1startc2;
-    wire [2:0] c1rowb1;
+    wire [clogb2(round_to_next_two(b1size))-1:0] c1rowb1;
     wire c1wrenb1;
     
     `include "functions.vh"
@@ -89,7 +91,7 @@ module top_nn #(
         .wren(c1wrenb1)
         );
         
-    localparam integer b1size = ((input_size+2*c1padding-c1filter_size)/c1stride) + 1;
+    
         
     bram_pad_interlayer #(
         .zero_padding(c2padding),
@@ -108,14 +110,17 @@ module top_nn #(
         .row(c1rowb1),
         .wren(c1wrenb1)
         );
+        
+        localparam integer c2size = b1size + 2*c2padding;
+        localparam integer b2size = ((c2size+2*0-c2filter_size)/c2stride) + 1;
     
     wire c2doneb2;
     wire [7:0] c2dinb2;
     wire m1ackc2;
-    wire [2:0] c2rowb2;
+    wire [clogb2(round_to_next_two(b2size))-1-1:0] c2rowb2;
     wire c2wrenb2;
     
-    localparam integer c2size = b1size + 2*c2padding;
+    
         
     conv_layer #(
         .zero_padding(0),
@@ -146,7 +151,7 @@ module top_nn #(
     wire [7:0] b2doutm1;
     wire b2startm1;
     
-    localparam b2size = ((c2size+2*0-c2filter_size)/c2stride) + 1;
+    
         
     bram_pad_interlayer #(
         .zero_padding(0),
@@ -167,9 +172,11 @@ module top_nn #(
         .wren(c2wrenb2)
         );
         
+        localparam b3size = ((b2size - m1pool_size)/m1stride) + 1;
+        
         wire m1doneb3;
         wire [7:0] m1dinb3;
-        wire [1:0] m1rowb3;
+        wire [clogb2(round_to_next_two(b3size))-1-1:0] m1rowb3;
         wire m1wrenb3;
         wire [9:0] m1addrb3;
     
@@ -194,7 +201,7 @@ module top_nn #(
         .wren(m1wrenb3)
         );
        
-     localparam b3size = ((b2size - m1pool_size)/m1stride) + 1;
+     
         
      bram_pad_interlayer #(
        .zero_padding(0),

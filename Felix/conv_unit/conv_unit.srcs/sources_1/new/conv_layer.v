@@ -65,7 +65,6 @@ module conv_layer
     reg [15:0] products [filter_size**2 - 1 : 0];
     reg [clogb2(round_to_next_two(filter_size**2))+16-1:0] sum = 0;
     
-    wire vram_addr [31:0];
     
     assign done_w = done;
     assign ready_w = ready;
