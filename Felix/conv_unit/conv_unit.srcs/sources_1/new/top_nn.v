@@ -68,11 +68,12 @@ module top_nn #(
     `include "functions.vh"
     
     conv_layer_mc #(
-        .zero_padding(c1padding),
         .stride(c1stride),
         .filter_size(c1filter_size),
         .filter_nb(c1filter_nb),
-        .input_size(input_size)
+        .input_size(input_size),
+        .channels(1),
+        .dsp_alloc(1)
         )
         conv1
         (
@@ -128,7 +129,9 @@ module top_nn #(
         .stride(c2stride),
         .filter_size(c2filter_size),
         .filter_nb(c2filter_nb),
-        .input_size(c2size)
+        .input_size(c2size),
+        .channels(1),
+        .dsp_alloc(1)
         )
         conv2
         (
