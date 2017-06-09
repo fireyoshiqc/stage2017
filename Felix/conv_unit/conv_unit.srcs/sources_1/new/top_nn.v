@@ -67,7 +67,7 @@ module top_nn #(
     
     `include "functions.vh"
     
-    conv_layer #(
+    conv_layer_mc #(
         .zero_padding(c1padding),
         .stride(c1stride),
         .filter_size(c1filter_size),
@@ -82,11 +82,11 @@ module top_nn #(
         .din(din),
         .filters(c1filters),
         .biases(c1biases),
-        .done_w(c1doneb1),
-        .ready_w(ready),
-        .load_done_w(lddone),
-        .dout_w(c1dinb1),
-        .addr_w(c1addrb1),
+        .done(c1doneb1),
+        .ready(ready),
+        .load_done(lddone),
+        .dout(c1dinb1),
+        .addr(c1addrb1),
         .row(c1rowb1),
         .wren(c1wrenb1)
         );
@@ -108,7 +108,8 @@ module top_nn #(
         .dout(b1doutc2),
         .start(b1startc2),
         .row(c1rowb1),
-        .wren(c1wrenb1)
+        .wren(c1wrenb1),
+        .channel(1)
         );
         
         localparam integer c2size = b1size + 2*c2padding;
@@ -122,7 +123,7 @@ module top_nn #(
     
     
         
-    conv_layer #(
+    conv_layer_mc #(
         .zero_padding(0),
         .stride(c2stride),
         .filter_size(c2filter_size),
@@ -137,11 +138,11 @@ module top_nn #(
         .din(b1doutc2),
         .filters(c2filters),
         .biases(c2biases),
-        .done_w(c2doneb2),
-        .ready_w(c2readyb1),
-        .load_done_w(c2ackc1),
-        .dout_w(c2dinb2),
-        .addr_w(c2addrb1),
+        .done(c2doneb2),
+        .ready(c2readyb1),
+        .load_done(c2ackc1),
+        .dout(c2dinb2),
+        .addr(c2addrb1),
         .row(c2rowb2),
         .wren(c2wrenb2)
         );
@@ -169,7 +170,8 @@ module top_nn #(
         .dout(b2doutm1),
         .start(b2startm1),
         .row(c2rowb2),
-        .wren(c2wrenb2)
+        .wren(c2wrenb2),
+        .channel(1)
         );
         
         localparam b3size = ((b2size - m1pool_size)/m1stride) + 1;
@@ -181,7 +183,7 @@ module top_nn #(
         wire [9:0] m1addrb3;
     
     maxpool_layer_mc #(
-        .pool_size(2),
+        .pool_size(m1pool_size),
         .input_size(b2size),
         .stride(1),
         .channels(1)
@@ -205,8 +207,7 @@ module top_nn #(
         
      bram_pad_interlayer #(
        .zero_padding(0),
-       .layer_size(b3size),
-       .pool_size(m1pool_size)
+       .layer_size(b3size)
        
        )
        bram3
@@ -220,7 +221,8 @@ module top_nn #(
        .dout(dout),
        .start(start_end),
        .row(0),
-       .wren(m1wrenb3)
+       .wren(m1wrenb3),
+       .channel(1)
        );
     
 endmodule
