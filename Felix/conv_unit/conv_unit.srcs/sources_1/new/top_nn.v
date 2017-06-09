@@ -117,7 +117,7 @@ module top_nn #(
     wire c2doneb2;
     wire [7:0] c2dinb2;
     wire m1ackc2;
-    wire [clogb2(round_to_next_two(b2size))-1-1:0] c2rowb2;
+    wire [clogb2(round_to_next_two(b2size))-1:0] c2rowb2;
     wire c2wrenb2;
     
     
