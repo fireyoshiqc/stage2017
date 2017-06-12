@@ -98,8 +98,7 @@ module conv_layer_mc
                 for (channel = clocked_channel; channel < clocked_channel+dsp_alloc; channel = channel + 1) begin
                     sum = sum + din[channel*8 +: 8] * conv_filter[clocked_i*filter_size+clocked_j][channel*8 +: 8];    
                 end
-                
-                
+               
                 if (channel < channels) begin
                     clocked_channel = clocked_channel + dsp_alloc;
                 end

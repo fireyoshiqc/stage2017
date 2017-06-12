@@ -86,42 +86,48 @@ module maxpool_layer_mc
 //                else begin
 //                    addr = addr + 1;
 //                end
-                
+                out_addr = max_i*max_res_size + max_j;
                 row = max_i;
+                wren = 0;
                 
-                if (clocked_i == 1'b0 && clocked_j == 1'b1) begin //LOSE A CLOCK CYCLE TO ALLOW BRAM TO KEEP UP
-//                    if (max_i == 0 && max_j == 0) begin
-//                        out_addr = 0;
+//                if (clocked_i == 1'b0 && clocked_j == 1'b1) begin //LOSE A CLOCK CYCLE TO ALLOW BRAM TO KEEP UP
+////                    if (max_i == 0 && max_j == 0) begin
+////                        out_addr = 0;
+////                    end
+////                    else begin
+////                        out_addr = out_addr + 1;
+////                    end
+//                    if (max_i > 0 || max_j > 0) begin
+//                        wren <= {channels{1'b1}}; // Enable writes
 //                    end
 //                    else begin
-//                        out_addr = out_addr + 1;
+//                        wren <= 0;
 //                    end
-                    if (max_i > 0 || max_j > 0) begin
-                        wren <= {channels{1'b1}}; // Enable writes
-                    end
-                    else begin
-                        wren <= 0;
-                    end
                     
-                    dout = max;
-                    max = 0;
-                end
-                else if (clocked_i*pool_size + clocked_j == 2) begin
+//                    dout = max;
+//                    max = 0;
+//                end
+//                else if (clocked_i*pool_size + clocked_j == 2) begin
                    
-                    if (max_i == 0 && max_j == 0) begin
-                        out_addr <= out_addr;
-                    end
+//                    if (max_i == 0 && max_j == 0) begin
+//                        out_addr <= out_addr;
+//                    end
                     
-                    else begin
-                        out_addr <= out_addr + 1;
+//                    else begin
+//                        out_addr <= out_addr + 1;
+//                    end
+//                end
+////                if (load_done) begin
+////                    operation = 3'b100;
+////                end
+////                else begin
+////                    operation =
+////                end
+                for (channel=0; channel<channels; channel = channel + 1) begin
+                    if (din[channel*8 +: 8] > max[channel*8 +: 8]) begin
+                        max[channel*8 +: 8] <= din[channel*8 +: 8];
                     end
                 end
-//                if (load_done) begin
-//                    operation = 3'b100;
-//                end
-//                else begin
-//                    operation =
-//                end
                 
                 if (clocked_i < pool_size - 1) begin
                     if (clocked_j < pool_size-1) begin
@@ -141,9 +147,11 @@ module maxpool_layer_mc
                         //addr = addr + 1;
                     end
                     else begin
-                        
+                        wren = {channels{1'b1}};
                         clocked_i = 0;
                         clocked_j = 0;
+                        dout = max;
+                        max = 0;
                         
                         
                         if (max_i < max_res_size-1) begin
@@ -175,13 +183,7 @@ module maxpool_layer_mc
                     end
                 end
                 
-                for (channel=0; channel<channels; channel = channel + 1) begin
-//                    if (tempram[addr][channel*8 +: 8] > dout[channel*8 +: 8]) begin
-//                        dout[channel*8 +: 8] = tempram[addr][channel*8 +: 8];
-                    if (din[channel*8 +: 8] > max[channel*8 +: 8]) begin
-                        max[channel*8 +: 8] <= din[channel*8 +: 8];
-                    end
-                end
+                
                 
                 addr = max_j*stride+max_i*stride*input_size + clocked_i*input_size+clocked_j;
                 

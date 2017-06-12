@@ -32,30 +32,30 @@ module top_nn_tb(
     wire start_end;
     
     top_nn #(
-        .input_channels(3),
+        .input_channels(1),//3
         .input_size(4),
         .c1padding(0),
         .c2padding(1),
         .c1stride(1),
         .c2stride(1),
         .m1stride(1),
-        .c1filter_size(3),
-        .c1filter_nb(32),
-        .c2filter_size(3),
-        .c2filter_nb(64),
+        .c1filter_size(2),
+        .c1filter_nb(1),
+        .c2filter_size(2),
+        .c2filter_nb(1),
         .m1pool_size(2),
-        .c1dsp_alloc(3),
-        .c2dsp_alloc(32)
+        .c1dsp_alloc(1),
+        .c2dsp_alloc(1)
         )
         uut 
         (
         .clk(clk),
         .start(1'b1),
         .din(din),
-        .c1filters({3*3*32*3*8{1'b1}}),
-        .c2filters({3*3*64*32*8{1'b1}}),
-        .c1biases({32*8{1'b1}}),
-        .c2biases({64*8{1'b1}}),
+        .c1filters({2*2{8'hFF}}),
+        .c2filters({2*2{8'hFF}}),
+        .c1biases({1{8'hFF}}),
+        .c2biases({1{8'hFF}}),
         .ready(ready),
         .lddone(lddone),
         .done(done),
@@ -66,6 +66,6 @@ module top_nn_tb(
         
         always begin
             #10 clk = ~clk;
-            din = 24'hffffff;//din + 1;
+            din = 8'hFF;
         end
 endmodule
