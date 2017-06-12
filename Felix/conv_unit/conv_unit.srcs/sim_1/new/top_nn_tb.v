@@ -25,34 +25,37 @@ module top_nn_tb(
     );
     
     reg clk = 1'b1;
-    reg [7:0] din = 0;
+    reg [3*8-1:0] din = 0;
     wire ready, lddone, done;
     wire [7:0] dout;
     wire [9:0] out_addr;
     wire start_end;
     
     top_nn #(
-        .input_size(28),
+        .input_channels(3),
+        .input_size(4),
         .c1padding(0),
         .c2padding(1),
         .c1stride(1),
         .c2stride(1),
         .m1stride(1),
-        .c1filter_size(5),
-        .c1filter_nb(1),
-        .c2filter_size(7),
-        .c2filter_nb(1),
-        .m1pool_size(2)
+        .c1filter_size(3),
+        .c1filter_nb(32),
+        .c2filter_size(3),
+        .c2filter_nb(64),
+        .m1pool_size(2),
+        .c1dsp_alloc(3),
+        .c2dsp_alloc(32)
         )
         uut 
         (
         .clk(clk),
         .start(1'b1),
         .din(din),
-        .c1filters({200{1'b1}}),
-        .c2filters({392{1'b1}}),
-        .c1biases(8'hFF),
-        .c2biases(8'hFF),
+        .c1filters({3*3*32*3*8{1'b1}}),
+        .c2filters({3*3*64*32*8{1'b1}}),
+        .c1biases({32*8{1'b1}}),
+        .c2biases({64*8{1'b1}}),
         .ready(ready),
         .lddone(lddone),
         .done(done),
@@ -63,6 +66,6 @@ module top_nn_tb(
         
         always begin
             #10 clk = ~clk;
-            din = din + 1;
+            din = 24'hffffff;//din + 1;
         end
 endmodule

@@ -41,7 +41,8 @@ module maxpool_layer_mc
     output reg load_done = 1'b0,
     output reg [clogb2(round_to_next_two(bram_depth))-1 : 0] addr = 0,
     output reg [clogb2(round_to_next_two(bram_depth))-1 : 0] out_addr = 0,
-    output reg wren = 1'b0
+    output reg [channels-1:0] wren = 0,
+    output reg [clogb2(round_to_next_two(max_res_size))-1 : 0] row = 0
     );
     
     `include "functions.vh"
@@ -86,7 +87,7 @@ module maxpool_layer_mc
 //                    addr = addr + 1;
 //                end
                 
-                
+                row = max_i;
                 
                 if (clocked_i == 1'b0 && clocked_j == 1'b1) begin //LOSE A CLOCK CYCLE TO ALLOW BRAM TO KEEP UP
 //                    if (max_i == 0 && max_j == 0) begin
@@ -96,7 +97,7 @@ module maxpool_layer_mc
 //                        out_addr = out_addr + 1;
 //                    end
                     if (max_i > 0 || max_j > 0) begin
-                        wren <= 1; // Enable writes
+                        wren <= {channels{1'b1}}; // Enable writes
                     end
                     else begin
                         wren <= 0;
@@ -205,6 +206,7 @@ module maxpool_layer_mc
                 wren <= 0;
                 max_j <= 0;
                 max_i <= 0;
+                row <= 0;
                 clocked_j <= 0;
                 clocked_i <= 0;
                 if (ack) begin // TO READY
