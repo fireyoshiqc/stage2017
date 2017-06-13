@@ -25,7 +25,7 @@ module top_nn_tb(
     );
     
     reg clk = 1'b1;
-    reg [3*8-1:0] din = 0;
+    reg [8-1:0] din = 0;
     wire ready, lddone, done;
     wire [7:0] dout;
     wire [9:0] out_addr;

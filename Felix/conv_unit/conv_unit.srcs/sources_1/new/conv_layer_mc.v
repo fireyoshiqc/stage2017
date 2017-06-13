@@ -89,11 +89,17 @@ module conv_layer_mc
             //      the corresponding byte (filter).
             // 6. Reset mul-acc to 0 and go to next kernel.
             // 7. When whole image has been treated, go to done.
-            
-            
+                
                 out_addr = conv_i*conv_res_size + conv_j;
                 row = conv_i;
                 wren = 0;
+                
+                if (load_done) begin
+                    operation <= 3'b100;
+                end
+                else begin
+                
+                
                 
                 for (channel = clocked_channel; channel < clocked_channel+dsp_alloc; channel = channel + 1) begin
                     sum = sum + din[channel*8 +: 8] * conv_filter[clocked_i*filter_size+clocked_j][channel*8 +: 8];    
@@ -103,80 +109,97 @@ module conv_layer_mc
                     clocked_channel = clocked_channel + dsp_alloc;
                 end
                 else begin
+                    clocked_j = clocked_j + 1;
                     clocked_channel = 0;
-                    if (clocked_i < filter_size - 1) begin
-                        if (clocked_j < filter_size - 1) begin
-                            clocked_j = clocked_j + 1;
-                            clocked_i = clocked_i;
-                        end
-                        else begin
-                            clocked_i = clocked_i + 1;
-                            clocked_j = 0;
-                        end
-                    end
-                    else begin
-                        if (clocked_j < filter_size - 1) begin
-                            clocked_j = clocked_j + 1;
-                            clocked_i = clocked_i;
-                        end
-                        else begin
+                    if (clocked_j >= filter_size) begin
+                        addr <= addr + 1;
+                        clocked_j = 0;
+                        clocked_i = clocked_i + 1;
+                        if (clocked_i >= filter_size) begin
+                            clocked_i = 0;
                             wren[conv_k]= 1'b1;
                             sum = sum + biases[conv_k*8 +: 8];
                             dout[conv_k*8 +: 8] = sum[(clogb2(round_to_next_two(channels*filter_size**2))+16)-1 -: 8]+sum[(clogb2(round_to_next_two(channels*filter_size**2))+8)-1];
                             sum = 0;
-                            clocked_i =0;
-                            clocked_j = 0;
-                        
-                            if (conv_i < conv_res_size - 1) begin
-                                if (conv_j < conv_res_size - 1) begin
-                                    conv_j = conv_j + 1;
-                                    conv_i = conv_i;
+                            conv_j = conv_j + 1;
+                            if (conv_j >= conv_res_size) begin
+                                conv_j = 0;
+                                conv_i = conv_i + 1;
+                                if (conv_i >= conv_res_size) begin
+                                    conv_i = 0;
+                                    conv_k = conv_k + 1;
+                                    if (conv_k >= filter_nb) begin
+                                        operation <= 3'b001;
+                                        load_done <= 1'b1;
+                                    end
+                                    else begin
+                                        operation <= 3'b010;
+                                    end
                                 end
                                 else begin
-                                    conv_i = conv_i + 1;
-                                    conv_j = 0;
+                                conv_k = conv_k;
+                                operation = 3'b001;
                                 end
                             end
                             else begin
-                                if (conv_j < conv_res_size - 1) begin
-                                    conv_j = conv_j + 1;
-                                    conv_i = conv_i;
-                                end
-                                else begin
-                                    conv_j = 0;
-                                    conv_i = 0;
-                                    clocked_i = 0;
-                                    clocked_j = 0;
-                                    conv_k = conv_k + 1;
-                                    if (conv_k < filter_nb) begin
-                                        operation <= 3'b010; // TO LOAD NEXT FILTER
-                                    end
-                                    else begin
-                                        operation <= 3'b100; // TO DONE
-                                        load_done <= 1'b1;
-                                    end
-                                    
-                                end
+                                conv_i = conv_i;
+                                conv_k = conv_k;
+                                operation = 3'b001;
                             end
                         end
+                        else begin
+                            conv_i = conv_i;
+                            conv_j = conv_j;
+                            conv_k = conv_k;
+                            operation = 3'b001;
+                        end
                     end
-                end
-            
-                addr = (clocked_i+conv_i*stride) * input_size + (clocked_j+conv_j*stride);
+                    else begin
+                        if (clocked_j == filter_size - 1) begin
+                            if (clocked_i == filter_size -1) begin
+                                if (conv_j == conv_res_size - 1) begin
+                                    if (conv_i == conv_res_size - 1) begin
+                                        addr <= 0;
+                                    end
+                                    else begin
+                                        addr <= addr + input_size*(stride-filter_size)+1;
+                                    end
+                                end
+                                else begin
+                                    addr <= addr + stride - (input_size+1)*(filter_size-1);
+                                end
+                            end
+                            else begin
+                                addr <= addr + input_size - filter_size + 1;
+                            end
+                            
+                        end
+                        
+                        else begin
+                            addr <= addr + 1;
+                        end
+                        clocked_i = clocked_i;
+                        conv_i = conv_i;
+                        conv_j = conv_j;
+                        conv_k = conv_k;
+                        operation <= 3'b001;
+                    end
+                end           
+                end   
 
             end
             3'b010: begin   // LOAD FILTER
-                addr = 0;
-                dout = 0;
-                out_addr = 0;
-                wren = 0;
+                addr <= 1;
+                dout <= 0;
+                out_addr <= 0;
+                wren <= 0;
                 for (j = 0; j<filter_size**2; j = j+1) begin
                     conv_filter [j] <= filters[(conv_k*(filter_size**2) +j)*channels*8 +: channels*8];
                 end
                 ready <= 1'b0;
                 done <= 1'b0;
 
-                operation = 3'b001;
+                operation <= 3'b001;
                 
             end
 
