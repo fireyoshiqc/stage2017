@@ -1,0 +1,11 @@
+nnet-codegen
+(import w "toynetwork-w.nn")
+(define b (data
+  -0.932403 1.964976 0.849697
+))
+(network
+  (input 6 (fixed 1 8))
+  (fc (output 3 (fixed 2 8)) (weights (data @w) (fixed 4 4)) (simd 2)
+      (neuron
+        (bias $b (fixed 4 8))
+        (sigmoid (fixed 2 8) 2 16))))

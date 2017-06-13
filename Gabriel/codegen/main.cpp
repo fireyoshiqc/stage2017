@@ -7,8 +7,10 @@
 using namespace std;
 
 #include "gen.h"
+#include "util.h"
 
 using namespace gen;
+using namespace util;
 
 void example()
 {
@@ -28,7 +30,7 @@ void example()
     ofstream file("testgen.vhd", ios::trunc);
     if (!file.is_open())
         throw runtime_error("Can't open testgen.vhd.");
-    file << eval(network, interface);
+    file << gen_code(network, interface);
 }
 
 void toy_network()
@@ -46,16 +48,32 @@ void toy_network()
              | bias(b, spec(4, 8))
              | sigmoid(spec(2, 8), 2, 16) )
         ;
+    assert_valid(network);
+//    auto interface = test_interface({ 0.270478, 0.808408, 0.463890, 0.291382, 0.800599, 0.203051 });
+//    ofstream file("system.vhd", ios::trunc);
+//    if (!file.is_open())
+//        throw runtime_error("Can't open system.vhd.");
+//    file << gen_code(network, interface);
+    for (double out : gen_feedforward(network)({ 0.270478, 0.808408, 0.463890, 0.291382, 0.800599, 0.203051 }))
+        cout << out << ' ';
+}
+
+void toy_network2()
+{
+    auto network = parse(sexpr::read_file("toynetwork.nn"))[0];
+    assert_valid(network);
+    for (double out : gen_feedforward(network)({ 0.270478, 0.808408, 0.463890, 0.291382, 0.800599, 0.203051 }))
+        cout << out << ' ';
     auto interface = test_interface({ 0.270478, 0.808408, 0.463890, 0.291382, 0.800599, 0.203051 });
-    ofstream file("system.vhd", ios::trunc);
+    ofstream file("toynetwork.vhd", ios::trunc);
     if (!file.is_open())
-        throw runtime_error("Can't open system.vhd.");
-    file << eval(network, interface);
+        throw runtime_error("Can't open toynetwork.vhd.");
+    file << gen_code(network, interface);
 }
 
 int main()
 {
-    toy_network();
+    //toy_network();
+    //example();
+    toy_network2();
 }
-
-
