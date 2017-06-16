@@ -21,52 +21,69 @@
 
 
 module conv_to_fc_interlayer#(
-    parameter channels = 4,
+    parameter channels = 10,
     parameter channel_width = 8,
     parameter data_depth = 784,
-    parameter fc_simd = 3 // FC LAYER SIMD WIDTH
-    // THIS INTERLAYER DOES NOT SUPPORT ZERO PADDING
+    parameter fc_simd = 15, // FC LAYER SIMD WIDTH
+    parameter out_channels = lcm(channels, fc_simd)
     )
+    
     (
-    input clk, done, ready,
+    input clk, done,
     input [clogb2(round_to_next_two(data_depth))-1 : 0] in_addr,
     input [channels*channel_width-1:0] din,
     input [channels - 1 : 0] wren_in,
-    output reg [fc_simd - 1 : 0] wren_out = 0,
-    output reg [fc_simd*channel_width-1:0] dout = 0,
-    output reg [clogb2(round_to_next_two(channels*data_depth/fc_simd))-1 : 0] out_addr = 0,
-    output reg start = 1'b0,
-    output reg hold_cycle = 1'b1
+    output reg [out_channels - 1 : 0] wren_out = 0,
+    output reg [out_channels*channel_width-1:0] dout = 0,
+    output reg [clogb2(round_to_next_two(channels*data_depth/out_channels))-1 : 0] out_addr = 0,
+    output reg layer_done = 1'b1
     );
-    //reg [clogb2(round_to_next_two(channels*data_depth/fc_simd))-1 : 0] mod_addr = 0;
-    //reg [channels*channel_width-1:0] hold_data;
-    //wire wren = ~done;
     
     
     `include "functions.vh"
-    
+      
     integer i = 0;
-    integer j = 0;
-    integer last_read = 0;
-    //localparam integer smallest = fc_simd < channels ? fc_simd : channels;
-    //localparam integer biggest = fc_simd > channels ? fc_simd : channels;
-    
-    // WORKS FOR FC_SIMD SMALLER THAN CHANNELS, AND ONLY ONE WRITEBYTE ENABLE AT A TIME...
-    // STILL NEEDS SOME IMPROVEMENTS.
-    
+    integer count = 0;
+
     always @(posedge clk) begin
-        wren_out = 0;
-        for (i=0; i<channels; i=i+1) begin
-            if (wren_in[i]) begin
-                if (j >= fc_simd) begin
-                    j <= 0;
-                    out_addr <= out_addr + 1;
+    
+        if (done) begin // MODULE BEFORE IS DONE, LAST WORD HAS BEEN RECEIVED, SO END THE OUTPUT
+            dout <= dout;
+            out_addr <= out_addr;
+            wren_out <= {out_channels{1'b1}};
+            count <= count;
+            layer_done <= 1'b1;
+        
+        end
+        else if (layer_done) begin
+            dout <= 0;
+            out_addr <= 0;
+            count <= 0;
+            wren_out <= 0;
+            layer_done <= 1'b0;
+        end
+        else begin
+            layer_done <= 1'b0;
+            wren_out = 0;
+            if (count >= out_channels) begin
+                out_addr <= out_addr + 1;
+                count = 0;
+                dout = 0;
+            end
+            else begin
+                out_addr <= out_addr;
+                count = count;
+                dout = dout;
+            end
+        
+            for (i=0; i<channels; i=i+1) begin
+                if (wren_in[i]) begin
+                    dout[count*channel_width +: channel_width] = din[i*channel_width +: channel_width];
+                    count = count + 1;
+                    if (count >= out_channels) begin
+                        wren_out = {out_channels{1'b1}};
+                    end
                 end
-                else begin
-                    j <= j + 1;
-                end
-                    wren_out[j] = 1'b1;
-                    dout[j*channel_width +: channel_width] <= din[i*channel_width +: channel_width];
             end
         end
     end
