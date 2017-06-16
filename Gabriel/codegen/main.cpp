@@ -12,6 +12,169 @@ using namespace std;
 using namespace gen;
 using namespace util;
 
+//#define COMPILED_AS_TOOL
+
+#ifdef COMPILED_AS_TOOL
+
+#include <string>
+#include <iostream>
+#include <tuple>
+#include <unordered_map>
+
+void help()
+{
+    cout << R"(usage: nngen [<options>] <source>
+             [-g [<interface-type> <dest-file>]...]
+             [-f [<data-file> <dest-file>]...]
+
+The following options are available:
+   -h (--help): Display this text.
+   -d (--direct): <source> is itself a string containing the network
+                  description.
+If -d is absent, then <source> is the path to a file containing the network
+description.
+
+The following actions can be undertaken:
+   -g (--generate): Generates a VHDL file implementing the fixed-point neural
+                    network(s) described by source using interface(s)
+                    <interface-type> and writes the result(s) to the
+                    <dest-file>(s). The following interfaces are available:
+                       block
+                       sim
+                       test
+   -f (--feedforward): Feedforwards some data through the network
+                       (floating point) described by source. <data-file>
+                       is a file containing the inputs and <dest-file> is the
+                       destination file where the outputs are written
+                       (1 line = output of 1 network).
+<dest-file> can alternatively take the following values:
+    _ : Discard the code for that network.
+    * : Send the generated code to stdout.
+
+example: nngen -h my-network.nn -g sim * block system.vhd
+               -f inputs1.txt result1.txt inputs2.txt _
+         Assuming my-network.nn contains 3 networks, this command:
+         - Displays this text.
+         - Generates VHDL code (sim interface) for the first network and sends
+           it to stdout
+         - Generates VHDL code (block interface) for the second network and
+           writes it to a file named "system.vhd"
+         - Ignores the third network.
+         - Feedforwards values located in inputs1.txt and stores the results
+           in result1.txt.
+         - Ignores the second and third networks.
+)";
+}
+
+enum opt_t { opt_help, opt_direct, opt_SIZE };
+unordered_map<string, opt_t> opt_map = {
+    {"h", opt_help}, {"help", opt_help},
+    {"d", opt_direct}, {"direct", opt_direct},
+};
+
+tuple<vector<bool>, size_t> options(const vector<string>& opts)
+{
+    vector<bool> optvec(opt_SIZE, false);
+    size_t i = 0;
+    for (; i < opts.size(); ++i)
+        if (opts[i].empty() || opts[i][0] != '-')
+            break;
+        else if (opts[i].size() > 1 && opts[i][1] == '-'){
+            auto it = opt_map.find(opts[i].substr(2));
+            if (it != opt_map.end())
+                optvec[it->second] = true;
+            else
+                cerr << "Unknown option \"" << opts[i].substr(2) << "\" ignored.\n";
+        } else
+            for (size_t j = 1; j < opts[i].size(); ++j){
+                auto it = opt_map.find(string(1, opts[i][j]));
+                if (it != opt_map.end())
+                    optvec[it->second] = true;
+                else
+                    cerr << "Unknown option '" << opts[i][j] << "' ignored.\n";
+            }
+    return make_tuple(move(optvec), i);
+}
+
+int main(int argc, char* argv[])
+{
+    vector<string> args; args.reserve(argc - 1);
+    for (int i = 1; i < argc; ++i)
+        args.push_back(argv[i]);
+    vector<bool> opt; size_t sourcep;
+    tie(opt, sourcep) = options(args);
+    if (args.empty() || opt[opt_help])
+        help();
+    if (sourcep == args.size()){
+        cerr << "Source missing from arguments.\n";
+        help();
+        return 1;
+    }
+    try {
+        auto networks = parse(!opt[opt_direct] ? sexpr::read_file(args[sourcep]) : sexpr::read(args[sourcep]));
+        for (size_t i = 0; i < args.size(); ++i)
+            if (args[i] == "-g" || args[i] == "--generate"){
+                ++i;
+                unique_ptr<system_interface> interface = nullptr;
+                for (size_t curnet = 0; i < args.size(); ++i)
+                    if (args[i].empty() || args[i][0] == '-'){
+                        ++i;
+                        break;
+                    } else if (interface == nullptr){
+                        interface = read_data(actual_path + "/realnet/translated-mnist-ex/index-120-P-input.nn");
+                    } else {
+                        if (args[i] != "_"){
+                            if (args[i] == "*")
+                                cout << gen_code(networks[curnet], *interface);
+                            else {
+                                ofstream outfile(args[i], ios::trunc);
+                                if (!outfile.is_open())
+                                    throw runtime_error("Can't open file \"" + args[i] + "\".");
+                                outfile << gen_code(networks[curnet], *interface);
+                            }
+                        }
+                        ++curnet;
+                        interface = nullptr;
+                    }
+                --i;
+            } else if (args[i] == "-f" || args[i] == "--feedforward"){
+                ++i;
+                vector<double> inputs; bool got_inputs = false;
+                for (size_t curnet = 0; i < args.size(); ++i)
+                    if (args[i].empty() || args[i][0] == '-'){
+                        ++i;
+                        break;
+                    } else if (!got_inputs){
+                        inputs = read_data(args[i]);
+                        got_inputs = true;
+                    } else {
+                        if (args[i] != "_"){
+                            if (args[i] == "*")
+                                for (double d : gen_feedforward(networks[curnet])(inputs))
+                                    cout << d << ' ';
+                            else {
+                                ofstream outfile(args[i], ios::trunc);
+                                if (!outfile.is_open())
+                                    throw runtime_error("Can't open file \"" + args[i] + "\".");
+                                for (double d : gen_feedforward(networks[curnet])(inputs))
+                                    outfile << d << ' ';
+                            }
+                        }
+                        ++curnet;
+                        got_inputs = false;
+                    }
+                --i;
+            } else
+                cerr << "Unexpected argument \"" << args[i] << "\" encountered (arg " <<  << ").\n";
+    } catch (exception& e) {
+        cerr << "Error: " << e.what() << '\n';
+        return 1;
+    }
+    return 0;
+}
+
+#else
+
 void example()
 {
     vector<double> w1(28 * 28 * 40), b1(40), w2(40 * 10), b2(10);
@@ -65,15 +228,33 @@ void toy_network2()
     for (double out : gen_feedforward(network)({ 0.270478, 0.808408, 0.463890, 0.291382, 0.800599, 0.203051 }))
         cout << out << ' ';
     auto interface = test_interface({ 0.270478, 0.808408, 0.463890, 0.291382, 0.800599, 0.203051 });
-    ofstream file("toynetwork.vhd", ios::trunc);
+    ofstream file("system.vhd", ios::trunc);
     if (!file.is_open())
         throw runtime_error("Can't open toynetwork.vhd.");
     file << gen_code(network, interface);
 }
 
+string actual_path = "C:/Users/gademb/stage2017/Gabriel/codegen";
+
+void real_network()
+{
+    auto network = parse(sexpr::read_file(actual_path + "/realnet/realnet.nn"), actual_path + "/realnet/")[0];
+    assert_valid(network);
+    for (double out : gen_feedforward(network)(read_data(actual_path + "/realnet/translated-mnist-ex/index-120-P-input-subset.nn")))
+        cout << out << ' ';
+    auto interface = test_interface(read_data(actual_path + "/realnet/translated-mnist-ex/index-120-P-input-subset.nn"));
+    ofstream file("C:/Users/gademb/stage2017/Gabriel/nnet/system.vhd", ios::trunc);
+    if (!file.is_open())
+        throw runtime_error("Can't open realnet.vhd.");
+    file << gen_code(network, interface);
+}
+
 int main()
 {
-    //toy_network();
-    //example();
-    toy_network2();
+    //toy_network2();
+    real_network();
 }
+
+#endif // COMPILED_AS_TOOL
+
+#undef COMPILED_AS_TOOL

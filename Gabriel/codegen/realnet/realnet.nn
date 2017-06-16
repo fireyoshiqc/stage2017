@@ -1,0 +1,14 @@
+nnet-codegen
+(import w1 "./realnet-w1-subset.nn")
+(import b1 "./realnet-b1.nn")
+(import w2 "./realnet-w2.nn")
+(import b2 "./realnet-b2.nn")
+(import w3 "./realnet-w3.nn")
+(import b3 "./realnet-b3.nn")
+(define my-sigmoid (sigmoid (fixed 2 8) 2 16))
+(network
+  (input 56 (fixed 1 8))
+  (fc (output 40 (fixed 3 5)) (weights (data @w1) (fixed 2 6)) (simd 14)
+      (neuron
+        ))
+)

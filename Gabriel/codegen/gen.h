@@ -362,7 +362,7 @@ struct datum
     datum(string name, data_type type, Sem sem, vector<double> value) : name(move(name)), value(move(value)), type(move(type)), sem(sem) {}
     datum(string name, data_type type, Sem sem, string value) : name(move(name)), value(move(value)), type(move(type)), sem(sem) {}
     string generic_decl() { return name + " : " + type.full_name(); }
-    string port_decl() { return name + " : " + (is_in ? "in " : "out ") + type.full_name(); }
+    string port_decl() { return name + " : " + (is_in ? "in " : "out ") + type.name; }
     string generic_inst() { return name + " => " + formatted_value(); }
     string port_inst() { return name + " => " + plugged_signal_name; }
     string signal() { return sem != Sem::clock && sem != Sem::reset ? "signal " + plugged_signal_name + " : " + type.full_name() + ";" : ""; }
@@ -647,7 +647,11 @@ struct fc_layer_component : public component
         datum& op_arg_spec = find_by(generic, Sem::param, "op_arg_spec");
         datum& weight_spec = find_by(generic, Sem::data_spec);
         datum& simd_width = find_by(generic, Sem::param, "simd_width");
-        op_arg_spec.value = { prevspec[0] + weight_spec.value[0] + prevwidth / size_t(simd_width.value[0]) + ceil(log2(simd_width.value[0])),
+        size_t mul_int_part = prevspec[0] + weight_spec.value[0] + 1,
+               n_accumulated = prevwidth / size_t(simd_width.value[0]);
+        double mulacc_int_part = ceil(log2(n_accumulated * pow(2.0, mul_int_part) + 1)),
+               add_tree_contribution = ceil(log2(simd_width.value[0]));
+        op_arg_spec.value = { mulacc_int_part + add_tree_contribution,//prevspec[0] + weight_spec.value[0] + prevwidth / size_t(simd_width.value[0]) + ,
                               prevspec[1] + weight_spec.value[1] };
         find_by(port, Sem::main_input).type.set_range(prevwidth * (prevspec[0] + prevspec[1]) - 1, 0);
         datum& side_output = find_by(port, Sem::side_output);
@@ -703,7 +707,6 @@ struct fc_layer_component : public component
             component* start = subsystem->start(), * last = subsystem->last();
             ss << start->demand_signal(Sem::main_input) << " <= " << demand_signal(Sem::side_output) << ";\n"
                << start->demand_signal(Sem::sig_in_back) << " <= " << demand_signal(Sem::sig_out_side) << ";\n"
-               << demand_signal(Sem::side_input) << " <= " << last->demand_signal(Sem::main_output) << ";\n"
                << demand_signal(Sem::sig_in_side) << " <= " << last->demand_signal(Sem::sig_out_front) << ";\n"
                << subsystem->chain_side();
             for (auto&& cur : subsystem->components)
@@ -1031,11 +1034,30 @@ public:
     string components, signals, instances;
 };
 
+
 struct system_interface
 {
     virtual string entity(system& s) = 0;
     virtual string architecture_preface(system& s) = 0;
     virtual string architecture_body(system& s) = 0;
+};
+
+using interface_generator = function<unique_ptr<system_interface>(const sexpr&)>;
+unordered_map<string, interface_generator> interface_generators;
+int define_interface_generator(const string& name, interface_generator igen)
+{
+    interface_generators.emplace(name, move(igen));
+    return 0;
+}
+unique_ptr<system_interface> generate_interface(const sexpr& s)
+{
+    if (s.size() < 2 || !s[1].is_leaf())
+        throw runtime_error("Interface s-expr is unnamed.");
+    auto it = interface_generators.find(s[1].string());
+    if (it != interface_generators.end())
+        return (it->second)(s);
+    else
+        throw runtime_error("Could not find an interface with the name \"" + s[1].string() + "\".");
 };
 
 struct block_interface : public system_interface
@@ -1068,6 +1090,10 @@ R"(    clk : in std_logic;
         return ss.str();
     }
 };
+auto block_int_gen = define_interface_generator("block", +[](const sexpr& s)
+{
+    return unique_ptr<system_interface>(new block_interface());
+});
 
 string to_vec_function_def(system& s)
 {
@@ -1118,6 +1144,12 @@ R"(    clk : in std_logic;
     }
     vector<double> test_input;
 };
+auto sim_int_gen = define_interface_generator("sim", +[](const sexpr& s)
+{
+    if (s.size() < 3)
+        throw runtime_error("sim interface generator: Third argument missing.");
+    return unique_ptr<system_interface>(new sim_interface(parse_data(s[2], "sim interface generator")));
+});
 
 struct test_interface : public system_interface
 {
@@ -1169,6 +1201,12 @@ R"(uPS : ps port map(
     }
     vector<double> test_input;
 };
+auto test_int_gen = define_interface_generator("test", +[](const sexpr& s)
+{
+    if (s.size() < 3)
+        throw runtime_error("test interface generator: Third argument missing.");
+    return unique_ptr<system_interface>(new test_interface(parse_data(s[2], "test interface generator")));
+});
 
 system_str_parts process(system& sys, size_t input_width, pair<int, int> input_spec)
 {
@@ -1275,18 +1313,46 @@ size_t substitute_macro(sexpr_field& target, sexpr& target_parent, size_t target
     return 1;
 }
 
-vector<system_specification> parse(sexpr s)
+bool parse_macro(sexpr& s, size_t i, const string& src_path)
+{
+    if (s[i][0].string() == "define"){
+        if (s[i].size() != 3 || s[i][1].is_tree())
+            throw runtime_error("parse: For top[" + to_string(i) + "] macro definition: Invalid format (needs a name plus one arbitrary field).");
+        for (size_t j = i + 1, stride; j < s.size(); j += stride)
+            stride = substitute_macro(s[j], s, j, s[i][1].string(), s[i][2]);
+    } else if (s[i][0].string() == "import"){
+        if (s[i].size() != 3 || s[i][1].is_tree() || s[i][2].is_tree())
+            throw runtime_error("parse: For top[" + to_string(i) + "] macro importation: Invalid format (needs a name plus a file path).");
+        for (size_t j = i + 1, stride; j < s.size(); j += stride)
+            stride = substitute_macro(s[j], s, j, s[i][1].string(), sexpr_field(sexpr::read_file(path_relative_to(s[i][2].string(), src_path))));
+    } else
+        return false;
+    return true;
+}
+
+template<typename Specific>
+void top_level_parse(const string& caller, const string& preface, sexpr& s, const string& src_path, Specific&& specific)
 {
     if (s.empty())
-        throw runtime_error("parse: Top s-expression is empty.");
-    if (s[0].is_tree() || s[0].string() != "nnet-codegen")
-        throw runtime_error("parse: Wrong format (\"nnet-codegen\" preface missing).");
-    vector<system_specification> res;
+        throw runtime_error(caller + ": Top s-expression is empty.");
+    if (s[0].is_tree() || s[0].string() != preface)
+        throw runtime_error(caller + ": Wrong format (\"" + preface + "\" preface missing).");
     for (size_t i = 1; i < s.size(); ++i){
+        if (s[i].is_leaf())
+            continue;
         if (s[i].empty())
-            throw runtime_error("parse: Stray empty s-expression encountered at top[" + to_string(i) + "].");
+            throw runtime_error(caller + ": Stray empty s-expression encountered at top[" + to_string(i) + "].");
         if (s[i][0].is_tree())
-            throw runtime_error("parse: Unnamed s-expression at top[" + to_string(i) + "].");
+            throw runtime_error(caller + ": Unnamed s-expression at top[" + to_string(i) + "].");
+        if (!specific(i) && !parse_macro(s, i, src_path))
+            throw runtime_error(caller + ": Unknown s-expression with name \"" + s[0][0].string() + "\" at top[" + to_string(i) + "].");
+    }
+}
+
+vector<system_specification> parse(sexpr s, const string& src_path = "./")
+{
+    vector<system_specification> res;
+    top_level_parse("parse", "nnet-codegen", s, src_path, [&](size_t i){
         if (s[i][0].string() == "network"){
             if (s[i].size() == 1 || s[i][1].is_leaf() || s[i][1].empty() || s[i][1][0].is_tree() || s[i][1][0].string() != "input")
                 throw runtime_error("parse: Missing input specification at beginning of top[" + to_string(i) + "] network.");
@@ -1301,20 +1367,59 @@ vector<system_specification> parse(sexpr s)
                 string pos_info = "top[" + to_string(i) + "] network, layer " + to_string(j);
                 res.back().parts.push_back(layer_spec_parser_from_name(s[i][j][0].string(), pos_info)(s[i][j], pos_info));
             }
-        } else if (s[i][0].string() == "define"){
-            if (s[i].size() != 3 || s[i][1].is_tree())
-                throw runtime_error("parse: For top[" + to_string(i) + "] macro definition: Invalid format (needs a name plus one arbitrary field).");
-            for (size_t j = i + 1, stride; j < s.size(); j += stride)
-                stride = substitute_macro(s[j], s, j, s[i][1].string(), s[i][2]);
-        } else if (s[i][0].string() == "import"){
-            if (s[i].size() != 3 || s[i][1].is_tree() || s[i][2].is_tree())
-                throw runtime_error("parse: For top[" + to_string(i) + "] macro importation: Invalid format (needs a name plus a file path).");
-            for (size_t j = i + 1, stride; j < s.size(); j += stride)
-                stride = substitute_macro(s[j], s, j, s[i][1].string(), sexpr_field(sexpr::read_file(s[i][2].string())));
         } else
-            throw runtime_error("parse: Unknown s-expression with name \"" + s[0][0].string() + "\" at top[" + to_string(i) + "].");
-    }
+            return false;
+        return true;
+    });
     return move(res);
+
+//    if (s.empty())
+//        throw runtime_error("parse: Top s-expression is empty.");
+//    if (s[0].is_tree() || s[0].string() != "nnet-codegen")
+//        throw runtime_error("parse: Wrong format (\"nnet-codegen\" preface missing).");
+//    vector<system_specification> res;
+//    for (size_t i = 1; i < s.size(); ++i){
+//        if (s[i].is_leaf())
+//            continue;
+//        if (s[i].empty())
+//            throw runtime_error("parse: Stray empty s-expression encountered at top[" + to_string(i) + "].");
+//        if (s[i][0].is_tree())
+//            throw runtime_error("parse: Unnamed s-expression at top[" + to_string(i) + "].");
+//        if (s[i][0].string() == "network"){
+//            if (s[i].size() == 1 || s[i][1].is_leaf() || s[i][1].empty() || s[i][1][0].is_tree() || s[i][1][0].string() != "input")
+//                throw runtime_error("parse: Missing input specification at beginning of top[" + to_string(i) + "] network.");
+//            if (s[i][1].size() != 3)
+//                throw runtime_error("parse: Input specification at beginning of top[" + to_string(i) + "] network needs 2 arguments (not " + to_string(s[0][1].size() - 1) + ").");
+//            res.emplace_back();
+//            res.back().input_width = parse_positive_integer(s[i][1][1], "first argument of input of top[" + to_string(i) + "] network");
+//            res.back().input_spec = parse_fixed_pair(s[i][1][2], "second argument of input of top[" + to_string(i) + "] network");
+//            for (size_t j = 2; j < s[i].size(); ++j){
+//                if (s[i][j].is_leaf() || s[i][j].empty() || s[i][j][0].is_tree())
+//                    throw runtime_error("parse: For top[" + to_string(i) + "] network: Argument " + to_string(j - 1) + " is not a layer.");
+//                string pos_info = "top[" + to_string(i) + "] network, layer " + to_string(j);
+//                res.back().parts.push_back(layer_spec_parser_from_name(s[i][j][0].string(), pos_info)(s[i][j], pos_info));
+//            }
+//        } else if (!parse_macro(s, i, src_path))
+//            throw runtime_error("parse: Unknown s-expression with name \"" + s[0][0].string() + "\" at top[" + to_string(i) + "].");
+//    }
+//    return move(res);
 }
+
+//sexpr parse_interface(sexpr s, const string& src_path = "./")
+//{
+//    sexpr res;
+//    top_level_parse("parse-interface", "int-codegen", s, src_path, [&](size_t i){
+//        if (s[i][0].string() == "interface"){
+//            if (s[i].size() == 1 || (s[i].size() > 1 && !s[i][1].is_leaf()))
+//                throw runtime_error("parse_interface: Interface declaration at top[" + to_string(i) + "] is missing a name.");
+//            res = s[i].sexpr();
+//        } else
+//            return false;
+//        return true;
+//    });
+//    if (res.empty())
+//        throw runtime_error("parse_interface: Could not find an interface declaration in the interface file \"" + src_path + "\".");
+//    return move(res);
+//}
 
 }

@@ -1,0 +1,3 @@
+int-codegen
+(import input "./translated-mnist-ex/index-120-P-input.nn")
+(interface test (data @input))

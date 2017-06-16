@@ -8,6 +8,10 @@
 #include <iomanip>
 #include <sstream>
 
+//#include <experimental/filesystem>
+
+//#include <exper
+
 namespace util
 {
 using namespace std;
@@ -160,13 +164,9 @@ struct sexpr
         ifstream file(filename);
         if (!file.is_open())
             throw runtime_error("sexpr::read_file: Couldn't open file \"" + filename + "\".");
-
-        file.seekg(0, ios::end);
-        size_t sz = file.tellg();
-        string content(sz, ' ');
-        file.seekg(0, ios::beg);
-        file.read(const_cast<char*>(content.data()), sz);
-        return read(content);
+        stringstream ss;
+        ss << file.rdbuf();
+        return read(ss.str());
     }
     string write(const string& indent = string()) const
     {
@@ -203,5 +203,52 @@ struct sexpr
 sexpr_field& access(sexpr& s, size_t index) { return s[index]; }
 const sexpr_field& access(const sexpr& s, size_t index) { return s[index]; }
 size_t get_size(const sexpr& s) { return s.size(); }
+
+vector<double> read_data(const string& filename)
+{
+    ifstream file(filename);
+    if (!file.is_open())
+        throw runtime_error("read_data: Couldn't open file \"" + filename + "\".");
+    vector<double> res;
+    for (;;){
+        double d; file >> d;
+        if (file.eof()) break;
+        res.push_back(d);
+    }
+    return move(res);
+}
+
+void pop_path(string& path)
+{
+    if (path.empty())
+        return;
+    if (path.back() == '/' || path.back() == '\\')
+        path.pop_back();
+    while (path.back() != '/' && path.back() != '\\')
+        path.pop_back();
+}
+
+string path_relative_to(string rel_path, string abs_path)
+{
+    for (;;) {
+        if (rel_path.find("./") == 0)
+            rel_path = rel_path.substr(2);
+        else if (rel_path.find("../") == 0){
+            rel_path = rel_path.substr(3);
+            pop_path(abs_path);
+        } else if (rel_path == "."){
+            rel_path.clear();
+            break;
+        } else if (rel_path == ".."){
+            rel_path.clear();
+            pop_path(abs_path);
+            break;
+        } else
+            break;
+    }
+    if (abs_path.empty() || abs_path.back() != '/')
+        abs_path.push_back('/');
+    return abs_path + rel_path;
+}
 
 } //namespace util
