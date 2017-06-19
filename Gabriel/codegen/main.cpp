@@ -3,11 +3,17 @@
 #include <vector>
 #include <fstream>
 #include <stdexcept>
+#include <iostream>
 
 using namespace std;
 
 #include "gen.h"
-#include "util.h"
+#include "fc_layer.h"
+#include "bias_op.h"
+#include "sigmoid_op.h"
+#include "block_interface.h"
+#include "sim_interface.h"
+#include "test_interface.h"
 
 using namespace gen;
 using namespace util;

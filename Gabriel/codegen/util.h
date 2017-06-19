@@ -9,10 +9,6 @@
 #include <sstream>
 #include <type_traits>
 
-//#include <experimental/filesystem>
-
-//#include <exper
-
 namespace util
 {
 using namespace std;
@@ -156,7 +152,7 @@ struct sexpr
         }
         if (level != 0 && cursor >= text.size())
             throw runtime_error("sexpr::read: Reached end of file before end of s-expression.");
-        if (level == 0 && text[cursor] == ')')
+        if (level == 0 && cursor < text.size())
             throw runtime_error("sexpr::read: Unexpected ')' encountered instead of end of file.");
         return move(res);
     }
