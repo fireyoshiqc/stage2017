@@ -7,6 +7,7 @@
 #include <fstream>
 #include <iomanip>
 #include <sstream>
+#include <type_traits>
 
 //#include <experimental/filesystem>
 
@@ -26,7 +27,7 @@ struct sexpr_field
     using stdstring = std::string;
     using sexpr_t = util::sexpr;
     enum type_t { sxempty, sxtree, sxleaf };
-    template<typename T>
+    template<typename T, enable_if_t<!is_same<decay_t<T>, sexpr_field>::value>* = nullptr>
     sexpr_field(T&& val)
         : u(forward<T>(val), this) {}
     static runtime_error unhandled_err(const std::string& caller, type_t type)

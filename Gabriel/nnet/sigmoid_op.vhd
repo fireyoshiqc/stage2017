@@ -116,21 +116,19 @@ begin
 		when idle =>
 			op_send <= '0';
 			if op_receive = '1'	then
-				--input_reg <= input;
 				abs_input_var := abs(input);
+				in_sgn <= input(input'high);
 				if abs_input_var >= real(max_approx) then
-				    if input(input'high) = '0' then output_reg <= to_sfixed(1.0, output_reg); else output_reg <= to_sfixed(0.0, output_reg); end if;
-				    state <= done;
+					output_reg <= to_sfixed(1.0, output_reg);
+					state <= done;
 				else
 				    index := unsigned(shift_range(std_logic_vector(abs_input_var(bits_needed(max_approx) - 1 downto -step_precision)), step_precision));
 				    coeff <= coeffs(to_integer(index));
 				    abs_input_reg <= abs_input_var;
-				    in_sgn <= input(input'high);
 				    state <= calculating;
 				end if;
 			end if;
 		when calculating =>
-			--calculate(output_reg, abs_input, in_sgn);
 			a := to_sfixed("0" & std_logic_vector(index), a);
             y := resize(coeff.approx + (abs_input_reg - a) * coeff.slope, y);
             output_reg <= y;

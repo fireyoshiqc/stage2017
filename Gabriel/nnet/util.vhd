@@ -60,7 +60,7 @@ begin
     buf((index + 1) * value'length - 1 downto index * value'length) <= std_logic_vector(value);
 end set;
 procedure set_var(variable buf : out std_logic_vector; index : integer; value : sfixed) is --procedures can possibly not work right during static initialization?
-begin
+begin -- set_var tends to fail badly on synthesis
     buf((index + 1) * value'length - 1 downto index * value'length) := std_logic_vector(value);
 end set_var;
 

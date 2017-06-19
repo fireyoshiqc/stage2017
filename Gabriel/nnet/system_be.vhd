@@ -27,7 +27,7 @@ port(clk, rst,
     --in_a : in std_logic_vector(test_data.inputs'length * 9 - 1 downto 0);
 	--first_done : out std_logic;
 	--first_out_off : out unsigned(5 downto 0);
-    out_a : out std_logic_vector(40 * 10  - 1 downto 0)
+    out_a : out std_logic_vector(10 * 10  - 1 downto 0)
     --test_out : out std_logic_vector(8 - 1 downto 0);
     --clk_out : out std_logic;
     --sel : in unsigned(5 - 1 downto 0)--(8 - 1 downto 0)
@@ -40,7 +40,7 @@ end component;
 	--signal first_out_off : unsigned(5 downto 0);
 	--signal sel : unsigned(5 - 1 downto 0);
     --signal in_a : std_logic_vector(9 * input_word_size - 1 downto 0);
-    signal out_a : std_logic_vector(40 * 10  - 1 downto 0);
+    signal out_a : std_logic_vector(10 * 10  - 1 downto 0);
 begin
     
 uut : system port map(
@@ -64,10 +64,11 @@ begin
 		clk <= '1';
 		wait for p / 2;
 		clk <= '0';
+		start <= '0';
 	end loop;
 	for i in 0 to 10 - 1 loop
-		assert false report real'image(to_real(to_sfixed(out_a((i + 1) * 10 - 1 downto i * 10), 5, -4)));
-		assert false report vec_image(std_logic_vector(to_sfixed(out_a((i + 1) * 10 - 1 downto i * 10), 5, -4)));
+		assert false report real'image(to_real(to_sfixed(out_a((i + 1) * 10 - 1 downto i * 10), 1, -8)));
+		assert false report vec_image(std_logic_vector(to_sfixed(out_a((i + 1) * 10 - 1 downto i * 10), 1, -8)));
 	end loop;
 	assert false report "!!!!!!!!!!!!!!!!!!!!!" severity failure;
 end process;

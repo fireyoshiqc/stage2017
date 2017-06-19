@@ -713,8 +713,10 @@ struct fc_layer_component : public component
                 if (!find_by(cur->port, Sem::offset_intake).is_invalid())
                     ss << cur->demand_signal(Sem::offset_intake) << " <= " << demand_signal(Sem::offset_outtake) << ";\n";
             ss << demand_signal(Sem::side_input) << " <= resize(" << last->demand_signal(Sem::main_output) << ", mk(" << find_by(generic, Sem::output_spec).formatted_value() << "));\n";
-        } else
+        } else {
             ss << demand_signal(Sem::side_input) << " <= resize(" << demand_signal(Sem::side_output) << ", mk(" << find_by(generic, Sem::output_spec).formatted_value() << "));\n";
+            ss << demand_signal(Sem::sig_in_side) << " <= " << demand_signal(Sem::sig_out_side) << ";\n";
+        }
         return ss.str();
     };
 };
@@ -1405,21 +1407,21 @@ vector<system_specification> parse(sexpr s, const string& src_path = "./")
 //    return move(res);
 }
 
-//sexpr parse_interface(sexpr s, const string& src_path = "./")
-//{
-//    sexpr res;
-//    top_level_parse("parse-interface", "int-codegen", s, src_path, [&](size_t i){
-//        if (s[i][0].string() == "interface"){
-//            if (s[i].size() == 1 || (s[i].size() > 1 && !s[i][1].is_leaf()))
-//                throw runtime_error("parse_interface: Interface declaration at top[" + to_string(i) + "] is missing a name.");
-//            res = s[i].sexpr();
-//        } else
-//            return false;
-//        return true;
-//    });
-//    if (res.empty())
-//        throw runtime_error("parse_interface: Could not find an interface declaration in the interface file \"" + src_path + "\".");
-//    return move(res);
-//}
+sexpr parse_interface(sexpr s, const string& src_path = "./")
+{
+    sexpr res;
+    top_level_parse("parse-interface", "int-codegen", s, src_path, [&](size_t i){
+        if (s[i][0].string() == "interface"){
+            if (s[i].size() == 1 || (s[i].size() > 1 && !s[i][1].is_leaf()))
+                throw runtime_error("parse_interface: Interface declaration at top[" + to_string(i) + "] is missing a name.");
+            res = s[i].sexpr();
+        } else
+            return false;
+        return true;
+    });
+    if (res.empty())
+        throw runtime_error("parse_interface: Could not find an interface declaration in the interface file \"" + src_path + "\".");
+    return move(res);
+}
 
 }

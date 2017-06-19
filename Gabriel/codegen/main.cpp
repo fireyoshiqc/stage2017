@@ -24,7 +24,7 @@ using namespace util;
 void help()
 {
     cout << R"(usage: nngen [<options>] <source>
-             [-g [<interface-type> <dest-file>]...]
+             [-g [<interface-file> <dest-file>]...]
              [-f [<data-file> <dest-file>]...]
 
 The following options are available:
@@ -36,29 +36,26 @@ description.
 
 The following actions can be undertaken:
    -g (--generate): Generates a VHDL file implementing the fixed-point neural
-                    network(s) described by source using interface(s)
-                    <interface-type> and writes the result(s) to the
-                    <dest-file>(s). The following interfaces are available:
-                       block
-                       sim
-                       test
-   -f (--feedforward): Feedforwards some data through the network
-                       (floating point) described by source. <data-file>
-                       is a file containing the inputs and <dest-file> is the
-                       destination file where the outputs are written
-                       (1 line = output of 1 network).
+                    network(s) described by <source> using interface(s) given
+                    in the <interface-file>(s) and writes the result(s) to the
+                    <dest-file>(s).
+   -f (--feedforward): Feedforwards some data through the (floating point)
+                       network described by source. <data-file> is a file
+                       containing the inputs and <dest-file> is the destination
+                       file where the outputs are written (1 line = output of 1
+                       network).
 <dest-file> can alternatively take the following values:
     _ : Discard the code for that network.
     * : Send the generated code to stdout.
 
-example: nngen -h my-network.nn -g sim * block system.vhd
+example: nngen -h my-network.nn -g my-interf1.int * my-interf2.int system.vhd
                -f inputs1.txt result1.txt inputs2.txt _
          Assuming my-network.nn contains 3 networks, this command:
          - Displays this text.
-         - Generates VHDL code (sim interface) for the first network and sends
-           it to stdout
-         - Generates VHDL code (block interface) for the second network and
-           writes it to a file named "system.vhd"
+         - Generates VHDL code (with my-interf1.int interface) for the first
+           network and sends it to stdout.
+         - Generates VHDL code (with my-interf2.int interface) for the second
+           network and writes it to a file named "system.vhd".
          - Ignores the third network.
          - Feedforwards values located in inputs1.txt and stores the results
            in result1.txt.
@@ -103,8 +100,10 @@ int main(int argc, char* argv[])
         args.push_back(argv[i]);
     vector<bool> opt; size_t sourcep;
     tie(opt, sourcep) = options(args);
-    if (args.empty() || opt[opt_help])
+    if (args.empty() || opt[opt_help]){
         help();
+        return 0;
+    }
     if (sourcep == args.size()){
         cerr << "Source missing from arguments.\n";
         help();
@@ -121,7 +120,7 @@ int main(int argc, char* argv[])
                         ++i;
                         break;
                     } else if (interface == nullptr){
-                        interface = read_data(actual_path + "/realnet/translated-mnist-ex/index-120-P-input.nn");
+                        interface = generate_interface(parse_interface(sexpr::read_file(args[i])));//read_data(actual_path + "/realnet/translated-mnist-ex/index-120-P-input.nn");
                     } else {
                         if (args[i] != "_"){
                             if (args[i] == "*")
@@ -165,7 +164,7 @@ int main(int argc, char* argv[])
                     }
                 --i;
             } else
-                cerr << "Unexpected argument \"" << args[i] << "\" encountered (arg " <<  << ").\n";
+                cerr << "Unexpected argument \"" << args[i] << "\" encountered (arg " << i << ").\n";
     } catch (exception& e) {
         cerr << "Error: " << e.what() << '\n';
         return 1;
@@ -228,7 +227,7 @@ void toy_network2()
     for (double out : gen_feedforward(network)({ 0.270478, 0.808408, 0.463890, 0.291382, 0.800599, 0.203051 }))
         cout << out << ' ';
     auto interface = test_interface({ 0.270478, 0.808408, 0.463890, 0.291382, 0.800599, 0.203051 });
-    ofstream file("system.vhd", ios::trunc);
+    ofstream file("C:/Users/gademb/stage2017/Gabriel/nnet/system.vhd", ios::trunc);
     if (!file.is_open())
         throw runtime_error("Can't open toynetwork.vhd.");
     file << gen_code(network, interface);
@@ -240,9 +239,9 @@ void real_network()
 {
     auto network = parse(sexpr::read_file(actual_path + "/realnet/realnet.nn"), actual_path + "/realnet/")[0];
     assert_valid(network);
-    for (double out : gen_feedforward(network)(read_data(actual_path + "/realnet/translated-mnist-ex/index-120-P-input-subset.nn")))
+    for (double out : gen_feedforward(network)(read_data(actual_path + "/realnet/translated-mnist-ex/index-217-N-input.nn")))
         cout << out << ' ';
-    auto interface = test_interface(read_data(actual_path + "/realnet/translated-mnist-ex/index-120-P-input-subset.nn"));
+    auto interface = test_interface(read_data(actual_path + "/realnet/translated-mnist-ex/index-217-N-input.nn"));
     ofstream file("C:/Users/gademb/stage2017/Gabriel/nnet/system.vhd", ios::trunc);
     if (!file.is_open())
         throw runtime_error("Can't open realnet.vhd.");
