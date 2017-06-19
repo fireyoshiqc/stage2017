@@ -60,7 +60,8 @@ class SParser:
         print("Parsed in quotes:", word)
         return word
 
-    def parse(self, level):
+    
+    def parse(self, level=0):
         sexpr = SNode()
         while (self.cursor < len(self.contents) and self.contents[self.cursor] != ')'):
             if self.contents[self.cursor] == '(':
@@ -68,6 +69,9 @@ class SParser:
                 print("New level of sexpr:", level + 1)
                 sexpr.add_child(self.parse(level + 1))
                 print ("Ended sexpr of level:", level + 1)
+                if sexpr.root == "import":
+                    imp = open(sexpr.children[1].root, 'r')
+                    self.find_and_replace(sexpr.children[0].root, imp)
             elif self.contents[self.cursor] == '"':
                 self.cursor += 1
                 sexpr.add_child(SNode(self.read_quoted()))
@@ -84,8 +88,19 @@ class SParser:
             raise RuntimeError("Unexpected ')' encountered instead of end of file.")
             
         return sexpr
+    
+    def find_and_replace(self, identifier, content):
+        newdata = self.contents[self.contents.find(identifier):].replace(identifier, content)
+        if identifier[0]=='$':
+            #With parentheses
+            self.contents = "("+newdata+")"   
+        elif identifier[0]=='@':
+            #Without parentheses
+            self.contents = newdata
+        else:
+            raise RuntimeError("Unknown identifier encountered, expected '$*' or '@*':", identifier)
 
-def main():
+'''def main():
     spar = SParser("test.nn")
     
     spar.parse(0).print()
@@ -93,3 +108,4 @@ def main():
 if __name__ == "__main__":
     main()
 
+'''
