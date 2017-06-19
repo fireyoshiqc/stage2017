@@ -298,7 +298,7 @@ module maxpool_layer_mc
                 row <= 0;
                 clocked_j <= 0;
                 clocked_i <= 0;
-                if (ack) begin // TO READY
+                if (ack & done) begin // TO READY
                     operation <= 3'b101;
                     ready <= 1'b1;
                     done <= 1'b0;

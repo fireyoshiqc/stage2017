@@ -1,0 +1,18 @@
+  (fc (output 40 (fixed 2 8)) (weights (data @w1) (fixed 2 6)) (simd 14)
+      (neuron
+        (bias (data @b1) (fixed 4 8))
+        $my-sigmoid))
+  (fc (output 10 (fixed 2 8)) (weights (data @w3) (fixed 4 4)) (simd 10)
+      (neuron
+        (bias (data @b3) (fixed 4 8))
+        $my-sigmoid))
+  (fc (output 40 (fixed 2 8)) (weights (data @w2) (fixed 3 5)) (simd 10)
+      (neuron
+        (bias (data @b2) (fixed 4 8))
+        $my-sigmoid))
+        
+  
+  (fc (output 40 (fixed 2 8)) (weights (data @w1) (fixed 2 6)) (simd 14)
+      (neuron
+        (bias (data @b1) (fixed 4 8))
+        $my-sigmoid))

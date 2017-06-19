@@ -39,7 +39,7 @@ module bram_pad_interlayer
     output reg start = 1'b0
     );
 
-    reg [channels*channel_width-1:0] bram [round_to_next_two(data_depth)-1:0];
+    reg [channels*channel_width-1:0] bram [data_depth-1:0];
     //wire wren = ~done;
     
     

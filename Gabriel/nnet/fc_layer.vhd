@@ -167,7 +167,7 @@ fc_w : fc_weights generic map(
     weight_values => weight_values
 )
 port map (
-    query => w_query,
+    query => clk,--w_query,
     w_offset => w_offset,
     w_data => w_data
 );

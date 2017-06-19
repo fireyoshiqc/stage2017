@@ -210,26 +210,48 @@ module top_nn #(
         .wren(m1wrenb3),
         .row(m1rowb3)
         );
+        
+        wire [lcm(c2filter_nb, 3)*8-1 : 0] b3din;
+        wire [lcm(c2filter_nb, 3)-1:0] b3wren;
+        wire b3done;
+        wire [clogb2(round_to_next_two(c2filter_nb*784/lcm(c2filter_nb, 3)))-1 : 0] b3addr;
+        
        
-     
+     conv_to_fc_interlayer #(
+        .channels(c2filter_nb),
+        .fc_simd(3)
+        )
+        tofc1
+        (
+        .clk(clk),
+        .done(m1doneb3),
+        .in_addr(m1addrb3),
+        .din(m1dinb3),
+        .out_addr(b3addr),
+        .wren_in(m1wrenb3),
+        .wren_out(b3wren),
+        .layer_done(b3done),
+        .dout(b3din)
+        );
         
      bram_pad_interlayer #(
        .zero_padding(0),
-       .layer_size(b3size),
-       .channels(c2filter_nb)
+       .layer_size(0),
+       .data_depth(c2filter_nb*784/lcm(c2filter_nb, 3)),
+       .channels(lcm(c2filter_nb,3))
        )
        bram3
        (
        .clk(clk),
-       .done(m1doneb3),
+       .done(b3done),
        .ready(1'b1),
-       .wr_addr(m1addrb3),
+       .wr_addr(b3addr),
        .rd_addr(0),
-       .din(m1dinb3),
+       .din(b3din),
        .dout(dout),
        .start(start_end),
        .row(m1rowb3),
-       .wren(m1wrenb3)
+       .wren(b3wren)
        );
     
 endmodule
