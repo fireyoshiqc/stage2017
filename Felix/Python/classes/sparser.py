@@ -7,8 +7,11 @@ class SNode:
             for child in children:
                 self.add_child(child)
     
+    def __str__(self):
+        return str(self.root)
+
     def __repr__(self):
-        return self.root
+        return str(self.root)
 
     def add_child(self, node):
         assert isinstance(node, SNode)
@@ -25,6 +28,15 @@ class SNode:
             print("Keyword:", self.root)
             for child in self.children:
                 child.print()
+    
+    def replace(self, identifier, content):
+        if str(self.root) == "@"+identifier:
+            self.root = SNode(content, self.children)
+        if str(self.root) == "$"+identifier:
+            self.root = SNode("("+content+")", self.children)
+        if self.children:
+            for child in self.children:
+                child.replace(identifier, content)
 
 class SParser:
 
@@ -34,7 +46,7 @@ class SParser:
         try:
             self.file = open(filename, 'r')
         except OSError:
-            print("Could not open specified file:", filename)
+            print("ERROR: Could not open specified file:", filename)
             exit()
         else:
             self.contents = self.file.read()
@@ -69,9 +81,30 @@ class SParser:
                 print("New level of sexpr:", level + 1)
                 sexpr.add_child(self.parse(level + 1))
                 print ("Ended sexpr of level:", level + 1)
-                if sexpr.root == "import":
-                    imp = open(sexpr.children[1].root, 'r')
-                    self.find_and_replace(sexpr.children[0].root, imp)
+                print("ROOT OF SEXPR:", str(sexpr.children[0].root))
+                if str(sexpr.children[-1].root).strip() == "import":
+                    print("FOUND IMPORT CLAUSE")
+                    try:
+                        imp = open(sexpr.children[-1].children[1].root, 'r').read()
+                        #sexpr.replace(sexpr.children[-1].children[0].root, imp)
+                        self.find_and_replace(sexpr.children[-1].children[0].root, imp)
+                    except OSError:
+                        print("ERROR: Could not open specified file:", sexpr.children[0].children[1].root)
+                        exit()
+                if str(sexpr.children[-1].root).strip() == "define":
+                    print("FOUND DEFINE CLAUSE")
+                    imp = "data "+" ".join(map(str,sexpr.children[-1].children[1].children))
+                    #sexpr.replace(sexpr.children[-1].children[0].root, imp)
+                    self.find_and_replace(sexpr.children[-1].children[0].root, imp)
+                if str(sexpr.children[-1].root).strip() == "data":
+                    print("FOUND DATA CLAUSE")
+                    for datum in sexpr.children[-1].children:
+                        try:
+                            if float(datum.root) != float(datum.root): #Check if NaN!=NaN, as defined
+                                raise RuntimeError("Found non-number in S-Expression starting with 'data'.")
+                        except ValueError:
+                            print("ERROR: Found non-number in S-Expression starting with 'data':", datum.root)
+                            exit()
             elif self.contents[self.cursor] == '"':
                 self.cursor += 1
                 sexpr.add_child(SNode(self.read_quoted()))
@@ -90,15 +123,12 @@ class SParser:
         return sexpr
     
     def find_and_replace(self, identifier, content):
-        newdata = self.contents[self.contents.find(identifier):].replace(identifier, content)
-        if identifier[0]=='$':
-            #With parentheses
-            self.contents = "("+newdata+")"   
-        elif identifier[0]=='@':
-            #Without parentheses
-            self.contents = newdata
-        else:
-            raise RuntimeError("Unknown identifier encountered, expected '$*' or '@*':", identifier)
+        #print("Cursor is at position:", self.cursor)
+        #print("Last char read:", self.contents[self.cursor])
+        newdata = self.contents[0:self.cursor] + self.contents[self.cursor:].replace("@"+identifier, content)
+        newdata = newdata[0:self.cursor]+newdata[self.cursor:].replace("$"+identifier, "("+content+")")
+        self.contents = newdata
+        print("Replaced " + identifier + " with " + content)
 
 '''def main():
     spar = SParser("test.nn")
