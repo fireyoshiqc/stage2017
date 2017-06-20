@@ -29,15 +29,72 @@ class SNode:
             for child in self.children:
                 child.print()
     
-    def replace(self, identifier, content):
-        if str(self.root) == "@"+identifier:
-            self.root = SNode(content, self.children)
-        if str(self.root) == "$"+identifier:
-            self.root = SNode("("+content+")", self.children)
-        if self.children:
+    def validate(self):
+        print("Validating", self.root)
+        if str(self.root)=="nnet-codegen":
+            if str(self.children[-1].root)=="network":
+                self.children[-1].validate()
+            else:
+                print("WARNING: Expected 'network' as last top-level S-Expression but found", self.children[-1].root)
+                print("For now, keragen only works with files containing a single network for training.")
+        elif str(self.root)=="data":
+            for datum in self.children:
+                try:
+                    if float(datum.root) != float(datum.root): #Check if NaN!=NaN, as defined
+                        raise RuntimeError("Found non-number in S-Expression starting with 'data'.")
+                except ValueError:
+                    print("ERROR: Found non-number in S-Expression starting with 'data':", datum.root)
+                    exit()
+        elif str(self.root)=="network":
             for child in self.children:
-                child.replace(identifier, content)
+                child.validate()
+        elif str(self.root) in ["input", "output"]:
+            try:
+                #if int(str(self.children[0].root))>0:# and str(self.children[1].root)=="fixed":
+                    #self.children[1].validate()
+                if int(str(self.children[0].root))<=0:
+                    print("ERROR: Negative or zero number of inputs/outputs found.")
+                    exit()
+                #else:
+                    #print("ERROR: Unknown data representation used. Expected 'fixed', got '"+str(self.children[1].root)+"'.")
+                    #exit()
+            except ValueError:
+                print("ERROR: Found non-integer as number of inputs/outputs:", str(self.children[0].root))
+                exit()
 
+        elif str(self.root)=="fc":
+            output_defined = False
+            neuron_defined = False
+            index = 0
+            for child in self.children:
+                if (str(child.root)=="output"):
+                    output_defined=True
+                    self.children[index].validate()
+                    
+                if (str(child.root)=="neuron"):
+                    neuron_defined=True
+                    self.children[index].validate()
+                    
+                index += 1
+            if (not output_defined):
+                print("ERROR: No suitable output S-Expression found in 'fc' clause.")
+                exit()
+            if (not neuron_defined):
+                print("ERROR: No suitable neuron S-Expression found in 'fc' clause.")
+                exit()
+        elif str(self.root)=="neuron":
+            activation_defined = False
+            index = 0
+            for child in self.children:
+                if (str(child.root) in ["sigmoid", "relu"]):
+                    activation_defined=True
+                    break
+                index += 1
+            if (not activation_defined):
+                print("ERROR: No suitable activation function S-Expression found in 'neuron' clause.")
+                exit()
+        else:
+            print("Network S-Expression is valid.")
 class SParser:
 
     cursor = 0
@@ -96,15 +153,7 @@ class SParser:
                     imp = "data "+" ".join(map(str,sexpr.children[-1].children[1].children))
                     #sexpr.replace(sexpr.children[-1].children[0].root, imp)
                     self.find_and_replace(sexpr.children[-1].children[0].root, imp)
-                if str(sexpr.children[-1].root).strip() == "data":
-                    print("FOUND DATA CLAUSE")
-                    for datum in sexpr.children[-1].children:
-                        try:
-                            if float(datum.root) != float(datum.root): #Check if NaN!=NaN, as defined
-                                raise RuntimeError("Found non-number in S-Expression starting with 'data'.")
-                        except ValueError:
-                            print("ERROR: Found non-number in S-Expression starting with 'data':", datum.root)
-                            exit()
+                
             elif self.contents[self.cursor] == '"':
                 self.cursor += 1
                 sexpr.add_child(SNode(self.read_quoted()))
