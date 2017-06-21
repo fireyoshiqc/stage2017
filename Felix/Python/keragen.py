@@ -63,6 +63,7 @@ def main(argv):
     kerasfile += create_training_loop()
 
     if outputfile is not None:
+        kerasfile += enable_saving_weights_and_biases(outputfile)
         print("Writing Keras code to", outputfile)
         out = open(outputfile, 'w+')
         out.write(kerasfile)
@@ -80,7 +81,7 @@ def main(argv):
             else:
                 print("Please make a valid choice [Y/N].")
     else:
-        print("No output file was defined. Training Keras model dynamically (use argument -o to write model to a file).")
+        print("No output file was defined. Training Keras model dynamically without saving weights or biases (use argument -o to write model to a file).")
         exec(kerasfile)
         exit()
 
@@ -188,6 +189,29 @@ score = model.evaluate(x_test, y_test, verbose=0)
 print('Test loss:', score[0])
 print('Test accuracy:', score[1])
 """
+
+def enable_saving_weights_and_biases(outputfile):
+    filename = outputfile.replace(".py", "")
+    savelines ="""
+counter = 0
+for layer in model.layers:
+    if layer.get_weights():
+        saver = open('"""+filename+"""_w'+str(counter)+'.nn', 'w+')
+        saver.write(" ".join(map(str,layer.get_weights()[0].flatten().tolist())))
+        saver.close()
+        print('Saved weights for layer', str(counter))
+        saver = open('"""+filename+"""_b'+str(counter)+'.nn', 'w+')
+        saver.write(" ".join(map(str,layer.get_weights()[1].flatten().tolist())))
+        saver.close()
+        print('Saved biases for layer', str(counter))
+        counter += 1
+
+print('Weights and biases all saved.\\nThe last saved layer is a softmax layer; its weights can be ignored if not using softmax in the FPGA implementation.')
+"""
+        
+    return savelines
+
+
 if __name__ == "__main__":
     main(sys.argv[1:])
 
