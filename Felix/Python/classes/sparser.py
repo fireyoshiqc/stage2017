@@ -53,7 +53,15 @@ class SNode:
             print("Keyword:", self.root)
             for child in self.children:
                 child.print()
-    
+
+    def all_str(self, level=0):
+        if not self.children:
+            return str(self.root)
+        else:
+            res = str(self.root) if level==0 else '('+str(self.root)
+            for child in self.children:
+                res+=" "+str(child.all_str(level + 1))
+            return res if level==0 else res + ')' 
     def validate(self):
         print("Validating", self.root)
         if str(self.root)=="nnet-codegen":
@@ -177,7 +185,7 @@ class SParser:
                         exit()
                 if str(sexpr.children[-1].root).strip() == "define":
                     print("FOUND DEFINE CLAUSE")
-                    imp = "data "+" ".join(map(str,sexpr.children[-1].children[1].children))
+                    imp = sexpr.children[-1].children[1].all_str()#"data "+" ".join(map(str,sexpr.children[-1].children[1].children))
                     #sexpr.replace(sexpr.children[-1].children[0].root, imp)
                     self.find_and_replace(sexpr.children[-1].children[0].root, imp)
                 
