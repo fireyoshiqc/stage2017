@@ -21,6 +21,31 @@ class SNode:
             self.children.append(node)
         return node
     
+    def search(self, root): # This works for singleton keywords such as 'input' only. Otherwise, returns the first encountered.
+        sexpr = None
+        if str(self.root) == root:
+            return self
+        else:
+            if not self.children:
+                return None
+            for child in self.children:
+                sexpr = child.search(root)
+                if sexpr is not None:
+                    return sexpr
+
+    def search_all(self, root): # This works for layers that are present multiple times, such as 'fc'.
+        sexprs = []
+        if str(self.root) == root:
+            return [self]
+        else:
+            if not self.children:
+                return None
+            for child in self.children:
+                sexpr=child.search_all(root)
+                if sexpr is not None:
+                    sexprs.extend(sexpr)
+            return sexprs
+
     def print(self):
         if not self.children:
             print("Argument:", self.root)
@@ -95,6 +120,8 @@ class SNode:
                 exit()
         else:
             print("Network S-Expression is valid.")
+
+
 class SParser:
 
     cursor = 0
