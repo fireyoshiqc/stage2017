@@ -8,26 +8,49 @@ def main(argv):
     outputfile = None
     epochs=0
     batch_size=0
+    verbose = False
     try:
-        opts, args = getopt.getopt(argv,"hi:o:", ["input=", "output="])
+        opts, args = getopt.getopt(argv,"hi:o:v", ["input=", "output="])
     except getopt.GetoptError:
-        print('keragen.py -i <input.nn file> -o <output.py file>')
+        print('Usage : keragen.py -i <input.nn file> -o <output.py file>')
         exit(2)
+    input_given = False
     for opt, arg in opts:
-        if opt=='-h':
-            print('keragen.py -i <input.nn file> -o <output.py file>')
+        if opt in ('-h', '--help'):
+            print("""
+Usage : keragen.py -i <input.nn file> -o <output.py file>
+
+Mandatory options :
+    -i <input.nn file>, --input <input.nn file>
+                    Input .nn file name to be used for generation
+
+Other options :
+    -o <output.py file>, --output <output.py file>
+                    Output .py file for generated Keras code
+
+    -h, --help      Show this help message and exit
+    
+    -v, --verbose   Enable info messages during parsing of input .nn file""")
             exit()
         elif opt in ("-i", "--input"):
             inputfile = arg
+            input_given = True
         elif opt in ("-o", "--output"):
             outputfile = arg
-
+        elif opt in ("-v", "--verbose"):
+            print("Running with verbose mode enabled.")
+            verbose = True
     
-    sexpr = SParser(inputfile).parse()
+    if not input_given:
+        print("An input file has to be specified with the -i option. See help using -h for more info.")
+        exit()
+    
+    sexpr = SParser(inputfile).parse(verbose=verbose)
     if str(sexpr.root) != "nnet-codegen":
         raise UserWarning("NN file should start with 'nnet-codegen'!")
-    sexpr.print()
-    sexpr.validate()
+    if verbose:
+        sexpr.print()
+    sexpr.validate(verbose)
 
     kerasfile+=build_header()
     
