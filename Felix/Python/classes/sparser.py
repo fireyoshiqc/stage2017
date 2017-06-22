@@ -33,15 +33,15 @@ class SNode:
                 if sexpr is not None:
                     return sexpr
 
-    def search_all(self, root): # This works for layers that are present multiple times, such as 'fc'.
+    def search_all(self, roots): # This works for layers that are present multiple times, such as 'fc'.
         sexprs = []
-        if str(self.root) == root:
+        if str(self.root) in roots:
             return [self]
         else:
             if not self.children:
                 return None
             for child in self.children:
-                sexpr=child.search_all(root)
+                sexpr=child.search_all(roots)
                 if sexpr is not None:
                     sexprs.extend(sexpr)
             return sexprs
@@ -116,6 +116,81 @@ class SNode:
             if (not neuron_defined):
                 print("ERROR: No suitable neuron S-Expression found in 'fc' clause.")
                 exit()
+
+        elif str(self.root)=="conv2d":
+            output_defined = False
+            neuron_defined = False
+            kernel_defined = False
+            stride_defined = False
+            padding_defined = False
+            index = 0
+            for child in self.children:
+                if (str(child.root)=="output"):
+                    output_defined=True
+                    self.children[index].validate(verbose)
+                    
+                if (str(child.root)=="neuron"):
+                    neuron_defined=True
+                    self.children[index].validate(verbose)
+
+                if (str(child.root)=="kernel"):
+                    kernel_defined=True
+                    self.children[index].validate(verbose)
+                    
+                if (str(child.root)=="stride"):
+                    stride_defined=True
+                    self.children[index].validate(verbose)
+                
+                if (str(child.root)=="padding"):
+                    padding_defined=True
+                    self.children[index].validate(verbose)
+                    
+                index += 1
+            if (not output_defined):
+                print("ERROR: No suitable output S-Expression found in 'conv2d' clause.")
+                exit()
+            if (not neuron_defined):
+                print("ERROR: No suitable neuron S-Expression found in 'conv2d' clause.")
+                exit()
+            if (not kernel_defined):
+                print("ERROR: No suitable kernel S-Expression found in 'conv2d' clause.")
+                exit()
+            if (not stride_defined):
+                print("ERROR: No suitable stride S-Expression found in 'conv2d' clause.")
+                exit()
+            if (not padding_defined):
+                print("ERROR: No suitable padding S-Expression found in 'conv2d' clause.")
+                exit()
+        
+        elif str(self.root)=="pool":
+            type_defined = False
+            stride_defined = False
+            padding_defined = False
+            index = 0
+            for child in self.children:
+                if (str(child.root) in ["max"]):
+                    type_defined=True
+                    self.children[index].validate(verbose)
+                    
+                if (str(child.root)=="stride"):
+                    stride_defined=True
+                    self.children[index].validate(verbose)
+                
+                if (str(child.root)=="padding"):
+                    padding_defined=True
+                    self.children[index].validate(verbose)
+                    
+                index += 1
+            if (not type_defined):
+                print("ERROR: No suitable pooling type S-Expression found in 'pool' clause.\nSupported types include : 'max'")
+                exit()
+            if (not stride_defined):
+                print("ERROR: No suitable stride S-Expression found in 'pool' clause.")
+                exit()
+            if (not padding_defined):
+                print("ERROR: No suitable padding S-Expression found in 'pool' clause.")
+                exit()
+
         elif str(self.root)=="neuron":
             activation_defined = False
             index = 0
@@ -125,8 +200,22 @@ class SNode:
                     break
                 index += 1
             if (not activation_defined):
-                print("ERROR: No suitable activation function S-Expression found in 'neuron' clause.")
+                print("ERROR: No suitable activation function S-Expression found in 'neuron' clause.\nSupported activation functions include: 'sigmoid', 'relu'")
                 exit()
+
+        elif str(self.root) in ["kernel", "max", "stride"]:
+            try:
+                if int(str(self.children[0].root))<=0:
+                    print("ERROR: Kernel, max and stride dimensions must be positive integers.")
+                    exit()
+            except ValueError:
+                print("ERROR: Found non-integer as kernel, max or stride dimension:", str(self.children[0].root))
+                exit()
+        
+        elif str(self.root) == "padding":
+            if str(self.children[0].root) not in ["same", "valid"]:
+                    print("ERROR: Unknown padding value encountered. Expected 'same' or 'valid', got '"+ str(self.children[0].root)+"'.")
+                    exit()
         elif verbose:
             print("Network S-Expression is valid.")
 
