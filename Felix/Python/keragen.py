@@ -1,5 +1,6 @@
 from classes.sparser import *
 import sys, getopt
+import math
 
 def main(argv):
     kerasfile=''
@@ -174,8 +175,15 @@ def generate_layers(sexpr):
             activation_function = 'sigmoid' if layer.search("neuron").search("sigmoid") else 'relu'
         if str(layer.root) == "fc":
             if last_layer != "fc":
-                layers+="""model.add(Flatten())
+                if first_layer:
+                    proxy_input = (int(math.sqrt(input_shape[0])), int(math.sqrt(input_shape[0])), 1)
+                    layers+="""model.add(Flatten(input_shape="""+str(proxy_input)+"""))
 """
+                    first_layer=False
+                else:
+                    layers+="""model.add(Flatten())
+"""
+
             if first_layer:
                 layers+="""model.add(Dense("""+str(output_size)+""", input_shape="""+str(input_shape)+""", activation='"""+activation_function+"""'))
 """
