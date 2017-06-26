@@ -2,6 +2,7 @@ from classes.sparser import *
 from classes.quantizer import *
 import sys, getopt
 import math
+import os, re
 
 def main(argv):
     kerasfile=''
@@ -103,6 +104,30 @@ Other options :
             elif run_now.upper() == 'Y':
                 print("Training Keras model dynamically...")
                 exec(kerasfile)
+                quantize_now = ''
+                while quantize_now.upper() not in ['Y', 'N']:
+                    quantize_now=input("Do you want to quantize your weights and biases on a certain number of bits (experimental) [Y/N]?")
+                    if quantize_now.upper() == 'N':
+                        print("Weights and biases not quantized.")
+                        exit()
+                    elif quantize_now.upper() == 'Y':
+                        print("How many bits do you want to quantize on (bits = int+frac parts)?")
+                        bits = 0
+                        while bits < 1:
+                            try:
+                                bits = int(input("Bits: "))
+                                if bits < 1:
+                                    print("Please enter a valid positive integer.")
+                            except ValueError:
+                                print("Please enter a valid positive integer.")
+                                continue
+                        qz = Quantizer()
+                        for f in os.listdir('.'):
+                            if f.startswith(outputfile.replace(".py", "") +"_b") or f.startswith(outputfile.replace(".py", "")+"_w"):
+                                if verbose:
+                                    print("Quantizing " + f + "... This may take a while.")
+                                qz.quantize_file(bits, f)
+
             else:
                 print("Please make a valid choice [Y/N].")
     else:

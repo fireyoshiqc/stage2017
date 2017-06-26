@@ -33,3 +33,5 @@ class Quantizer:
         file.write(" ".join(list(map(str, items))))
         file.close()
 
+    def quantize_file(self, bits, filename):
+        self.array_to_file(filename, self.quantize(bits, self.file_to_array(filename)))
