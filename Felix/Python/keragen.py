@@ -1,4 +1,5 @@
 from classes.sparser import *
+from classes.quantizer import *
 import sys, getopt
 import math
 
@@ -54,7 +55,7 @@ Other options :
     sexpr.validate(verbose)
 
     kerasfile+=build_header()
-    
+
     print("Please enter batch size and number of epochs for training...")
     while batch_size < 1:
         try:
