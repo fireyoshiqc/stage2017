@@ -43,12 +43,13 @@ module conv_layer_mc
     output reg [clogb2(round_to_next_two(bram_depth))-1 : 0] addr = 0,
     output reg [clogb2(round_to_next_two(bram_depth))-1 : 0] out_addr = 0,
     output reg [clogb2(round_to_next_two(conv_res_size))-1 : 0] row = 0,
-    output reg [filter_nb - 1 : 0] wren = 0
+    output reg [filter_nb - 1 : 0] wren = 0,
+    output reg [8-1 : 0] out_bias = 0
     );
     
     `include "functions.vh"
     
-    integer i = 0, j = 0;
+    integer filter_itr = 0;
     integer clocked_i = 0;
     integer clocked_j = 0;
     integer clocked_channel = 0;
@@ -56,11 +57,7 @@ module conv_layer_mc
     integer conv_j = 0;
     integer conv_k = 0;
     integer channel = 0;
-    
-    
-    
-    
-    
+
     reg [2:0] operation = 0;
     reg [channels * 8 - 1:0] conv_filter [filter_size**2 - 1 : 0];
     reg [clogb2(round_to_next_two(channels*filter_size**2))+16-1:0] sum = 0;
@@ -69,9 +66,6 @@ module conv_layer_mc
     always @(posedge clk) begin
         case (operation)
             3'b000: begin   // INITIALIZE
-//                for (i = 0; i<input_size**2 + 4*input_size*zero_padding + 4*zero_padding**2; i = i+1) begin
-//                    vram [i] <= 0;
-//                end
                 addr <= 0;
                 dout <= 0;
                 ready <= 1'b1;
@@ -118,7 +112,8 @@ module conv_layer_mc
                         if (clocked_i >= filter_size) begin
                             clocked_i = 0;
                             wren[conv_k]= 1'b1;
-                            sum = sum + biases[conv_k*8 +: 8];
+                            out_bias <= biases[conv_k*8 +: 8];
+                            //sum = sum + biases[conv_k*8 +: 8];
                             dout[conv_k*8 +: 8] = sum[(clogb2(round_to_next_two(channels*filter_size**2))+16)-1 -: 8]+sum[(clogb2(round_to_next_two(channels*filter_size**2))+8)-1];
                             sum = 0;
                             conv_j = conv_j + 1;
@@ -193,8 +188,8 @@ module conv_layer_mc
                 dout <= 0;
                 out_addr <= 0;
                 wren <= 0;
-                for (j = 0; j<filter_size**2; j = j+1) begin
-                    conv_filter [j] <= filters[(conv_k*(filter_size**2) +j)*channels*8 +: channels*8];
+                for (filter_itr = 0; filter_itr<filter_size**2; filter_itr = filter_itr+1) begin
+                    conv_filter[filter_itr] <= filters[(conv_k*(filter_size**2) + filter_itr)*channels*8 +: channels*8];
                 end
                 ready <= 1'b0;
                 done <= 1'b0;
