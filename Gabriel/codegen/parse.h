@@ -22,6 +22,20 @@ pair<int, int> parse_fixed_pair(const sexpr_field& s, const string& pos_info)
     }
     return res;
 }
+int parse_bits(const sexpr_field& s, const string& pos_info)
+{
+    if (s.is_leaf() || s.size() != 2 || s[0].is_tree() || s[0].string() != "bits" || s[1].is_tree())
+        throw runtime_error("parse_bits: At " + pos_info + ": Wrong format for \"bits\" fiels (Name \"bits\" + 1 positive integer argument expected).");
+    int res;
+    try {
+        res = stoi(s[1].string());
+        if (res <= 0)
+            throw runtime_error("parse_bits: At " + pos_info + ": Value should be positive.");
+    } catch (exception&){
+        throw runtime_error("parse_bits: At " + pos_info + ": Value has invalid format.");
+    }
+    return res;
+}
 size_t parse_positive_integer(const sexpr_field& s, const string& pos_info)
 {
     if (s.is_tree())

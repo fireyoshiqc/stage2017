@@ -5,7 +5,14 @@ nnet-codegen
 ))
 (network
   (input 6 (fixed 1 8))
-  (fc (output 3 (fixed 2 8)) (weights (data @w) (fixed 4 4)) (simd 2)
+  (fc (output 3 (fixed 2 8)) (weights (data @w)) (simd 2)
       (neuron
-        (bias $b (fixed 4 8))
+        (bias $b)
         (sigmoid (fixed 2 8) 2 16))))
+
+"(weights (data @w) (fixed 4 4))"
+"(weights (data @w) (bits 11))"
+"(weights (data @w))"
+"(bias $b (fixed 4 8))"
+"(bias $b (bits 7))"
+"(bias $b)"

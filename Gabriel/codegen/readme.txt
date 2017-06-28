@@ -74,8 +74,11 @@ After the input clause, any number of layer clauses can be added (in order) insi
 - Fully-connected layer, with the form (fc *output-clause* *weights-clause* *simd-clause* *neuron-clause*)
   - *output-clause* has the form (output *n-outputs* *fixed-spec*) where *n-outputs* is the number of neurons and *fixed-spec*
     is the fixed-point shape of each output value.
-  - *weights-clause* has the form (output *data* *fixed-spec*) where *data* is an s-expr starting with the word "data" followed
-    with arbitrarily many real and *fixed-spec* is the fixed-point shape of each weight value.
+  - *weights-clause* has the form (output *data* [*fixed-spec* | *bits-spec* | ]) where *data* is an s-expr starting with
+    the word "data" followed with arbitrarily many real. Another argument, which is either a *fixed-spec* (the fixed-point shape
+    of each weight value) or a *bits-spec* (with form (bits *n-bits*), meaning that a *fixed-spec* is automatically calculated
+    such that *int-part* + *frac-part* = *n-bits* and *int-part* is large enough to accomodate the weight with the largest
+    absolute value), can optionally be added. If it is omitted, then an argument of (bits 8) is implicitly assumed.
   - *simd-clause* has the form (simd *simd-window-width*) where *simd-window-width* is the number of inputs processed in parallel
     (*n-outputs* of the previous layer (or *n-inputs* before the first layer) should be a multiple of this layer's *simd-window-width*).
   - *neuron-clause* is a pipeline of operations to perform on each value before they are sent. It has the form (neuron *ops*...),
@@ -83,10 +86,10 @@ After the input clause, any number of layer clauses can be added (in order) insi
 
 === Currently available operations ===
 
-- Bias, with the form (bias *data* *fixed-spec*) where *data* is the biases (like for the *data* of a *weights-clause*) and *fixed-spec*
-  is the fixed-point shape of each bias value. This simply adds the input value with one of the bias values (indexed by the current
-  output offset). The fixed-point shapes of the input and outputs of this operation are determined automatically based on the
-  previous operation.
+- Bias, with the form (bias *data* [*fixed-spec* | *bits-spec* | ]) where *data* is the biases (like for the *data* of a *weights-clause*)
+  and the other optional argument behaves like the one for the weights of a fully-connected layer, but with a default of (bits 12).
+  This simply adds the input value with one of the bias values (indexed by the current output offset). The fixed-point shapes of the
+  input and outputs of this operation are determined automatically based on the previous operation.
 - Sigmoid, with the form (sigmoid *fixed-spec* *step-precision* *bit-precision*). *fixed-spec* is the fixed-point shape of the operation's
   output value. The operation is implemented by sampling a number of positive values and slopes of the sigmoid function below x = 6, and
   then interpolating between those samples using the real x value. *step-precision* is a number controlling the number of samples (so
@@ -102,17 +105,17 @@ nnet-codegen
 ))
 (network
   (input 6 (fixed 1 8))
-  (fc (output 3 (fixed 2 8)) (weights (data @w) (fixed 4 4)) (simd 2)
+  (fc (output 3 (fixed 2 8)) (weights (data @w)) (simd 2)
       (neuron
         (bias $b (fixed 4 8))
         (sigmoid (fixed 2 8) 2 16)))
   (fc (output 2 (fixed 2 8)) (weights (data 0.2 0.4 -0.12 0.0 -0.75 0.67) (fixed 4 4)) (simd 1)
       (neuron
-        (bias (data -1.4 2.1) (fixed 4 8))
+        (bias (data -1.4 2.1) (bits 12))
         (sigmoid (fixed 2 8) 2 16)))
-  (fc (output 2 (fixed 2 8)) (weights (data 1.1 -0.1 -0.75 0.45) (fixed 4 4)) (simd 2)
+  (fc (output 2 (fixed 2 8)) (weights (data 1.1 -0.1 -0.75 0.45) (bits 8)) (simd 2)
       (neuron
-        (bias (data 1.4 -3.0) (fixed 4 8))
+        (bias (data 1.4 -3.0))
         (sigmoid (fixed 2 8) 2 16))))
 """
 
