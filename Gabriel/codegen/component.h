@@ -20,6 +20,15 @@ inline size_t global_counter()
 };
 
 size_t bits_needed(size_t maxval) { return ceil(log2(maxval + 0.5)); }
+size_t bits_needed_for_max_int_part_signed(const vector<double>& v)
+{
+    if (v.empty())
+        return 1;
+    double absmax = abs(*max_element(v.begin(), v.end(), [](double a, double b){ return abs(a) < abs(b); }));
+    if (absmax == 0)
+        absmax = 1;
+    return 2 + floor(log2(absmax));
+}
 
 enum class Sem { clock, reset, main_input, main_output, sig_in_back, sig_in_front, sig_out_back, sig_out_front,
                  side_input, side_output, sig_in_side, sig_out_side, offset_intake, offset_outtake,

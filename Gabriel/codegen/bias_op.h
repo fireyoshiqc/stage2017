@@ -25,7 +25,13 @@ struct bias_op_component : public component
             datum("output",     sfixed_type,                                                 Sem::main_output)  .out(),
             datum("op_send",    std_logic_type,                                              Sem::sig_out_front)  .out(),
             datum("op_receive", std_logic_type,                                              Sem::sig_in_back).in(),
-        }) {}
+        })
+    {
+        int nbits_int = bits_needed_for_max_int_part_signed(biases);
+        if (nbits_int > bspec.first)
+            cerr << "Warning: Bias value " << *max_element(biases.begin(), biases.end()) << " requires at least " << nbits_int
+                 << " bits to represent its (signed) integer part, but only gets " << bspec.first << ".\n";
+    }
     virtual void propagate(component& prev)
     {
         datum& spec = find_by(generic, Sem::input_spec);
@@ -87,13 +93,26 @@ layer_specification bias(const vector<double>& b, pair<int, int> b_spec)
 
 auto bias_parse = define_layer_spec_parser("bias", +[](const sexpr_field& s, const string& pos_info)
 {
-    if (s.size() != 3)
-        throw runtime_error("layer_spec_parser for bias: At " + pos_info + ": Clause expects 2 arguments, not " + to_string(s.size() - 1) + ".");
+    if (s.size() != 2 && s.size() != 3)
+        throw runtime_error("layer_spec_parser for bias: At " + pos_info + ": Clause expects 2 or 3 arguments, not " + to_string(s.size() - 1) + ".");
     layer_specification layer{ "bias", {} };
-    layer.parameters.emplace("biases", parse_data(s[1], pos_info + ", first argument"));
-    pair<int, int> bspec = parse_fixed_pair(s[2], pos_info + ", second argument");
-    layer.parameters.emplace("bspec_int", bspec.first);
-    layer.parameters.emplace("bspec_frac", bspec.second);
+    vector<double> biases = parse_data(s[1], pos_info + ", first argument");
+    static constexpr int default_n_bits = 12;
+    const auto deduce_spec = [&](int n_bits){
+        int n_bits_int = bits_needed_for_max_int_part_signed(biases);
+        layer.parameters.emplace("bspec_int", n_bits_int);
+        layer.parameters.emplace("bspec_frac", n_bits - n_bits_int);
+    };
+    layer.parameters.emplace("biases", biases);
+    if (s.size() == 3){
+        if (s[2].is_tree() && !s[2].empty() && s[2][0].string() == "fixed"){
+            pair<int, int> bspec = parse_fixed_pair(s[2], pos_info + ", second argument");
+            layer.parameters.emplace("bspec_int", bspec.first);
+            layer.parameters.emplace("bspec_frac", bspec.second);
+        } else
+            deduce_spec(parse_bits(s[2], pos_info + ", second argument"));
+    } else
+        deduce_spec(default_n_bits);
     return move(layer);
 });
 

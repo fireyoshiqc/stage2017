@@ -174,14 +174,23 @@ create_clock -period 20.000 -name clk -waveform {0.000 10.000} [get_ports {clk}]
 # ----------------------------------------------------------------------------
 # User LEDs - Bank 33
 # ---------------------------------------------------------------------------- 
-set_property PACKAGE_PIN T22 [get_ports {test_out[0]}];  # "LD0"
-set_property PACKAGE_PIN T21 [get_ports {test_out[1]}];  # "LD1"
-set_property PACKAGE_PIN U22 [get_ports {test_out[2]}];  # "LD2"
-set_property PACKAGE_PIN U21 [get_ports {test_out[3]}];  # "LD3"
-set_property PACKAGE_PIN V22 [get_ports {test_out[4]}];  # "LD4"
-set_property PACKAGE_PIN W22 [get_ports {test_out[5]}];  # "LD5"
-set_property PACKAGE_PIN U19 [get_ports {test_out[6]}];  # "LD6"
-set_property PACKAGE_PIN U14 [get_ports {test_out[7]}];  # "LD7"
+set_property PACKAGE_PIN T22 [get_ports {debug[0]}];  # "LD0"
+set_property PACKAGE_PIN T21 [get_ports {debug[1]}];  # "LD1"
+set_property PACKAGE_PIN U22 [get_ports {debug[2]}];  # "LD2"
+set_property PACKAGE_PIN U21 [get_ports {debug[3]}];  # "LD3"
+set_property PACKAGE_PIN V22 [get_ports {debug[4]}];  # "LD4"
+set_property PACKAGE_PIN W22 [get_ports {debug[5]}];  # "LD5"
+set_property PACKAGE_PIN U19 [get_ports {debug[6]}];  # "LD6"
+set_property PACKAGE_PIN U14 [get_ports {debug[7]}];  # "LD7"
+
+#set_property PACKAGE_PIN T22 [get_ports {test_out[0]}];  # "LD0"
+#set_property PACKAGE_PIN T21 [get_ports {test_out[1]}];  # "LD1"
+#set_property PACKAGE_PIN U22 [get_ports {test_out[2]}];  # "LD2"
+#set_property PACKAGE_PIN U21 [get_ports {test_out[3]}];  # "LD3"
+#set_property PACKAGE_PIN V22 [get_ports {test_out[4]}];  # "LD4"
+#set_property PACKAGE_PIN W22 [get_ports {test_out[5]}];  # "LD5"
+#set_property PACKAGE_PIN U19 [get_ports {test_out[6]}];  # "LD6"
+#set_property PACKAGE_PIN U14 [get_ports {test_out[7]}];  # "LD7"
 
 # ----------------------------------------------------------------------------
 # VGA Output - Bank 33
@@ -204,7 +213,7 @@ set_property PACKAGE_PIN U14 [get_ports {test_out[7]}];  # "LD7"
 # ----------------------------------------------------------------------------
 # User Push Buttons - Bank 34
 # ---------------------------------------------------------------------------- 
-set_property PACKAGE_PIN P16 [get_ports {start}];  # "BTNC"
+#set_property PACKAGE_PIN P16 [get_ports {start}];  # "BTNC"
 #set_property PACKAGE_PIN R16 [get_ports {BTND}];  # "BTND"
 #set_property PACKAGE_PIN N15 [get_ports {BTNL}];  # "BTNL"
 #set_property PACKAGE_PIN R18 [get_ports {BTNR}];  # "BTNR"
@@ -236,6 +245,15 @@ set_property PACKAGE_PIN P16 [get_ports {start}];  # "BTNC"
 # ----------------------------------------------------------------------------
 # User DIP Switches - Bank 35
 # ---------------------------------------------------------------------------- 
+#set_property PACKAGE_PIN F22 [get_ports {switch}];  # "SW0"
+#set_property PACKAGE_PIN G22 [get_ports {sel[1]}];  # "SW1"
+#set_property PACKAGE_PIN H22 [get_ports {sel[2]}];  # "SW2"
+#set_property PACKAGE_PIN F21 [get_ports {sel[3]}];  # "SW3"
+#set_property PACKAGE_PIN H19 [get_ports {sel[4]}];  # "SW4"
+#set_property PACKAGE_PIN H18 [get_ports {sel[5]}];  # "SW5"
+#set_property PACKAGE_PIN H17 [get_ports {sel[6]}];  # "SW6"
+#set_property PACKAGE_PIN M15 [get_ports {sel[7]}];  # "SW7"
+
 set_property PACKAGE_PIN F22 [get_ports {sel[0]}];  # "SW0"
 set_property PACKAGE_PIN G22 [get_ports {sel[1]}];  # "SW1"
 set_property PACKAGE_PIN H22 [get_ports {sel[2]}];  # "SW2"

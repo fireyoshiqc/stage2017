@@ -14,6 +14,7 @@ using namespace std;
 #include "block_interface.h"
 #include "sim_interface.h"
 #include "test_interface.h"
+#include "feed_interface.h"
 
 using namespace gen;
 using namespace util;
@@ -228,11 +229,11 @@ void toy_network()
 
 void toy_network2()
 {
-    auto network = parse(sexpr::read_file("toynetwork.nn"))[0];
+    auto network = parse(sexpr::read_file("C:/Users/gademb/stage2017/Gabriel/codegen/toynetwork.nn"))[0];
     assert_valid(network);
     for (double out : gen_feedforward(network)({ 0.270478, 0.808408, 0.463890, 0.291382, 0.800599, 0.203051 }))
         cout << out << ' ';
-    auto interface = test_interface({ 0.270478, 0.808408, 0.463890, 0.291382, 0.800599, 0.203051 });
+    auto interface = feed_interface();//sim_interface({ 0.270478, 0.808408, 0.463890, 0.291382, 0.800599, 0.203051 });
     ofstream file("C:/Users/gademb/stage2017/Gabriel/nnet/system.vhd", ios::trunc);
     if (!file.is_open())
         throw runtime_error("Can't open toynetwork.vhd.");
@@ -247,7 +248,7 @@ void real_network()
     assert_valid(network);
     for (double out : gen_feedforward(network)(read_data(actual_path + "/realnet/translated-mnist-ex/index-217-N-input.nn")))
         cout << out << ' ';
-    auto interface = test_interface(read_data(actual_path + "/realnet/translated-mnist-ex/index-217-N-input.nn"));
+    auto interface = block_interface();//test_interface(read_data(actual_path + "/realnet/translated-mnist-ex/index-217-N-input.nn"));
     ofstream file("C:/Users/gademb/stage2017/Gabriel/nnet/system.vhd", ios::trunc);
     if (!file.is_open())
         throw runtime_error("Can't open realnet.vhd.");
@@ -256,8 +257,8 @@ void real_network()
 
 int main()
 {
-    //toy_network2();
-    real_network();
+    toy_network2();
+    //real_network();
 }
 
 #endif // COMPILED_AS_TOOL

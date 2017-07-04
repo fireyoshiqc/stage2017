@@ -78,7 +78,13 @@ struct fc_layer_component : public component
             datum("op_result",   sfixed_type.with_range(output_spec.first - 1, -output_spec.second),                               Sem::side_input)    .in(),
             datum("op_send",     std_logic_type,                                                                                   Sem::sig_out_side)  .out(),
             datum("op_receive",  std_logic_type,                                                                                   Sem::sig_in_side)   .in(),
-        }) {}
+        })
+    {
+        int nbits_int = bits_needed_for_max_int_part_signed(weights);
+        if (nbits_int > weight_spec.first)
+            cerr << "Warning: Weight value " << *max_element(weights.begin(), weights.end()) << " requires at least " << nbits_int
+                 << " bits to represent its (signed) integer part, but only gets " << weight_spec.first << ".\n";
+    }
     virtual void propagate(component& prev)
     {
         auto prevspec = find_by(prev.generic, Sem::output_spec).value.num;
@@ -250,6 +256,7 @@ auto fc_parse = define_layer_spec_parser("fc", +[](const sexpr_field& s, const s
             throw runtime_error("layer_spec_parser for fc: At " + pos_info + ": Couldn't find \"" + name + "\" field.");
         fields.emplace(name, &(*it));
     }
+
     const sexpr_field& outputf = *fields["output"];
     if (outputf.size() != 3)
         throw runtime_error("layer_spec_parser for fc: At " + pos_info + ": Output field takes 2 arguments, not " + to_string(outputf.size() - 1) + ".");
@@ -257,17 +264,33 @@ auto fc_parse = define_layer_spec_parser("fc", +[](const sexpr_field& s, const s
     pair<int, int> outspec = parse_fixed_pair(outputf[2], pos_info + ", second argument of output clause");
     layer.parameters.emplace("output_spec_int", outspec.first);
     layer.parameters.emplace("output_spec_frac", outspec.second);
+
     const sexpr_field& weightsf = *fields["weights"];
-    if (weightsf.size() != 3)
-        throw runtime_error("layer_spec_parser for fc: At " + pos_info + ": Weights field takes 2 arguments, not " + to_string(weightsf.size() - 1) + ".");
-    layer.parameters.emplace("weights", parse_data(weightsf[1], pos_info + ", first argument of weights clause"));
-    pair<int, int> wspec = parse_fixed_pair(weightsf[2], pos_info + ", second argument of weights clause");
-    layer.parameters.emplace("weight_spec_int", wspec.first);
-    layer.parameters.emplace("weight_spec_frac", wspec.second);
+    if (weightsf.size() != 2 && weightsf.size() != 3)
+        throw runtime_error("layer_spec_parser for fc: At " + pos_info + ": Weights field takes 2 or 3 arguments, not " + to_string(weightsf.size() - 1) + ".");
+    vector<double> w_data = parse_data(weightsf[1], pos_info + ", first argument of weights clause");
+    static constexpr int default_n_bits = 8;
+    const auto deduce_spec = [&](int n_bits){
+        int n_bits_int = bits_needed_for_max_int_part_signed(w_data);
+        layer.parameters.emplace("weight_spec_int", n_bits_int);
+        layer.parameters.emplace("weight_spec_frac", n_bits - n_bits_int);
+    };
+    layer.parameters.emplace("weights", w_data);
+    if (weightsf.size() == 3){
+        if (weightsf[2].is_tree() && !weightsf[2].empty() && weightsf[2][0].string() == "fixed"){
+            pair<int, int> wspec = parse_fixed_pair(weightsf[2], pos_info + ", second argument of weights clause");
+            layer.parameters.emplace("weight_spec_int", wspec.first);
+            layer.parameters.emplace("weight_spec_frac", wspec.second);
+        } else
+            deduce_spec(parse_bits(weightsf[2], pos_info + ", second argument of weights clause"));
+    } else
+        deduce_spec(default_n_bits);
+
     const sexpr_field& simdf = *fields["simd"];
     if (simdf.size() != 2)
         throw runtime_error("layer_spec_parser for fc: At " + pos_info + ": Simd field takes 1 argument, not " + to_string(simdf.size() - 1) + ".");
     layer.parameters.emplace("simd_width", parse_positive_integer(simdf[1], pos_info + ", first argument of simd clause"));
+
     const sexpr_field& neuronf = *fields["neuron"];
     system_specification side_path;
     for (size_t i = 1; i < neuronf.sexpr().fields.size(); ++i){

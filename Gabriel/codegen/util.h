@@ -18,6 +18,7 @@ struct sexpr_field;
 sexpr_field& access(sexpr& s, size_t index);
 const sexpr_field& access(const sexpr& s, size_t index);
 size_t get_size(const sexpr& s);
+//bool matches(const sexpr_field& s, const string& pattern);
 struct sexpr_field
 {
     using stdstring = std::string;
@@ -112,6 +113,7 @@ struct sexpr_field
     bool is_leaf() const { return type == sxleaf; }
     size_t size() const { return get_size(*u.tree); }
     bool empty() const { return get_size(*u.tree) == 0; }
+    //bool matches(const stdstring& pattern) const { return util::matches(*this, pattern); }
 };
 string read_word(const string& text, size_t& cursor)
 {
@@ -201,6 +203,11 @@ sexpr_field& access(sexpr& s, size_t index) { return s[index]; }
 const sexpr_field& access(const sexpr& s, size_t index) { return s[index]; }
 size_t get_size(const sexpr& s) { return s.size(); }
 
+bool is_sexpr_with_name(const sexpr_field& sf, const string& name)
+{
+    return sf.is_tree() && sf.size() > 0 && sf[0].is_leaf() && sf[0].string() == name;
+}
+
 vector<double> read_data(const string& filename)
 {
     ifstream file(filename);
@@ -247,5 +254,75 @@ string path_relative_to(string rel_path, string abs_path)
         abs_path.push_back('/');
     return abs_path + rel_path;
 }
+
+/*bool matches(const sexpr_field& s, const sexpr& pattern)
+{
+    if (pattern.size() != 1)
+        return false;
+    if (pattern[0].is_leaf()){
+        if (!s.is_leaf())
+            return false;
+        const string& expected = pattern[0].string();
+        if (expected == "%v")
+            return true;
+        else
+            return expected == s.string();
+    } else {
+        if (!s.is_tree())
+            return false;
+        const sexpr& expected = pattern[0].sexpr();
+        const sexpr& actual = s.sexpr();
+        size_t expi = 0, acti = 0, expsz = expected.size(), actsz = actual.size();
+        for (; expi < expsz && acti < actsz; ++expi, ++acti){
+            if (expected[expi].is_leaf()){
+                const string& cur_expected = expected[expi].string();
+                if (cur_expected.size() > 1 && cur_expected[0] == '%'){
+                    if (cur_expected[1] == 'v'){
+                        string rest = cur_expected.substr(2);
+                        if (rest == "..."){
+                            for (; acti < actsz; ++acti)
+                                if (!actual[acti].is_leaf())
+                                    return false;
+                            expi = expsz;
+                            break;
+                        } else if (!actual[acti].is_leaf())
+                            return false;
+                        continue;
+                    } else if (cur_expected[1] == 's'){
+                        string rest = cur_expected.substr(2);
+                        if (rest == "..."){
+                            for (; acti < actsz; ++acti)
+                                if (!actual[acti].is_tree())
+                                    return false;
+                            expi = expsz;
+                            break;
+                        } else if (!actual[acti].is_tree())
+                            return false;
+                        continue;
+                    } else if (cur_expected[1] == '?'){
+                        string rest = cur_expected.substr(2);
+                        if (rest == "..."){
+                            acti = actsz;
+                            expi = expsz;
+                            break;
+                        }
+                        continue;
+                    }
+                }
+                if (!actual[acti].is_leaf() || actual[acti].string() != cur_expected)
+                    return false;
+            } else
+                return matches(actual[acti], expected[expi].sexpr());
+        }
+        if (expi != expsz || acti != actsz)
+            return false;
+        return true;
+    }
+}
+
+bool matches(const sexpr_field& s, const string& pattern)
+{
+    return matches(s, sexpr::read(pattern));
+}*/
 
 } //namespace util
