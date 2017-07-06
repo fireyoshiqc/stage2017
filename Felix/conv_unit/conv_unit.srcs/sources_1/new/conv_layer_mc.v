@@ -29,22 +29,31 @@ module conv_layer_mc
     parameter integer input_size = 3,
     parameter integer channels = 2,
     parameter integer dsp_alloc = 1,
-    parameter integer conv_res_size = ((input_size-filter_size)/stride) + 1
+    parameter integer conv_res_size = ((input_size-filter_size)/stride) + 1,
+    parameter integer input_int_part = 0, // int_part=1 means a signed number between [0,1]
+    // Usually, inputs would be unsigned (since the input goes through a ReLU before a conv layer).
+    parameter integer input_frac_part = 8,
+    parameter integer weight_int_part = 1,
+    parameter integer weight_frac_part = 8,
+    parameter integer bias_int_part = 1,
+    parameter integer bias_frac_part = 8,
+    parameter integer out_int_part = 0,
+    parameter integer out_frac_part = 8
     )
     (
     input clk, ack, start,
-    input [channels * 8 - 1 : 0] din,
-    input [filter_size**2*filter_nb*channels*8-1 : 0] filters,
-    input [filter_nb*8-1 : 0] biases,
+    input [channels * (input_int_part+input_frac_part) - 1 : 0] din,
+    input [filter_size**2*filter_nb*channels*(weight_int_part+weight_frac_part)-1 : 0] filters,
+    input [filter_nb*(bias_int_part+bias_frac_part)-1 : 0] biases,
     output reg done = 1'b0,
     output reg ready = 1'b0,
     output reg load_done = 1'b0,
-    output reg [filter_nb * 8 - 1 : 0] dout,
+    output reg [filter_nb * (out_int_part+out_frac_part) - 1 : 0] dout,
     output reg [clogb2(round_to_next_two(bram_depth))-1 : 0] addr = 0,
     output reg [clogb2(round_to_next_two(bram_depth))-1 : 0] out_addr = 0,
     output reg [clogb2(round_to_next_two(conv_res_size))-1 : 0] row = 0,
-    output reg [filter_nb - 1 : 0] wren = 0,
-    output reg [8-1 : 0] out_bias = 0
+    output reg [filter_nb - 1 : 0] wren = 0//,
+    //output reg [8-1 : 0] out_bias = 0
     );
     
     `include "functions.vh"
@@ -59,8 +68,12 @@ module conv_layer_mc
     integer channel = 0;
 
     reg [2:0] operation = 0;
-    reg [channels * 8 - 1:0] conv_filter [filter_size**2 - 1 : 0];
-    reg [clogb2(round_to_next_two(channels*filter_size**2))+16-1:0] sum = 0;
+    reg [channels * (weight_int_part+weight_frac_part) - 1:0] conv_filter [filter_size**2 - 1 : 0];
+    reg signed [clogb2(round_to_next_two(channels*filter_size**2))+(input_int_part+weight_int_part+input_frac_part+weight_frac_part):0] sum = 0;
+    // Not -1, because we need the sign bit in case it falls below zero
+    
+    reg signed [input_int_part+input_frac_part-1:0] s_input;
+    reg signed [weight_int_part+weight_frac_part-1:0] s_weight;
     
     
     always @(posedge clk) begin
@@ -96,7 +109,10 @@ module conv_layer_mc
                 
                 
                 for (channel = clocked_channel; channel < clocked_channel+dsp_alloc; channel = channel + 1) begin
-                    sum = sum + din[channel*8 +: 8] * conv_filter[clocked_i*filter_size+clocked_j][channel*8 +: 8];    
+                    // It is assumed weights have a bigger integer part than inputs since they're signed
+                    s_input = {{(weight_int_part-input_int_part){1'b0}}, {din[channel*(input_int_part+input_frac_part) +: (input_int_part+input_frac_part)]}};
+                    s_weight = conv_filter[clocked_i*filter_size+clocked_j][channel*(weight_int_part+weight_frac_part) +: (weight_int_part+weight_frac_part)];
+                    sum = sum + s_input * s_weight;    
                 end
                
                 if (channel < channels) begin
@@ -112,7 +128,7 @@ module conv_layer_mc
                         if (clocked_i >= filter_size) begin
                             clocked_i = 0;
                             wren[conv_k]= 1'b1;
-                            out_bias <= biases[conv_k*8 +: 8];
+                            //out_bias <= biases[conv_k*8 +: 8];
                             //sum = sum + biases[conv_k*8 +: 8];
                             dout[conv_k*8 +: 8] = sum[(clogb2(round_to_next_two(channels*filter_size**2))+16)-1 -: 8]+sum[(clogb2(round_to_next_two(channels*filter_size**2))+8)-1];
                             sum = 0;
