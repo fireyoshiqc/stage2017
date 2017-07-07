@@ -15,10 +15,15 @@ using namespace std;
 
 struct sexpr;
 struct sexpr_field;
+string read_word(const string& text, size_t& cursor);
+string read_quoted(const string& text, size_t& cursor);
 sexpr_field& access(sexpr& s, size_t index);
 const sexpr_field& access(const sexpr& s, size_t index);
 size_t get_size(const sexpr& s);
-//bool matches(const sexpr_field& s, const string& pattern);
+vector<double> read_data(const string& filename);
+void pop_path(string& path);
+string path_relative_to(string rel_path, string abs_path);
+
 struct sexpr_field
 {
     using stdstring = std::string;
@@ -113,27 +118,8 @@ struct sexpr_field
     bool is_leaf() const { return type == sxleaf; }
     size_t size() const { return get_size(*u.tree); }
     bool empty() const { return get_size(*u.tree) == 0; }
-    //bool matches(const stdstring& pattern) const { return util::matches(*this, pattern); }
 };
-string read_word(const string& text, size_t& cursor)
-{
-    string res;
-    for (; cursor < text.size() && !isspace(text[cursor]) && text[cursor] != '(' && text[cursor] != ')'; ++cursor)
-        res.push_back(text[cursor]);
-    return res;
-}
-string read_quoted(const string& text, size_t& cursor)
-{
-    string res;
-    for (; cursor < text.size() && text[cursor] != '"'; ++cursor){
-        if (text[cursor] == '\\')
-            ++cursor;
-        res.push_back(text[cursor]);
-    }
-    if (cursor == text.size())
-        throw runtime_error("read_quoted: Reached end of file before end of quote.");
-    return res;
-}
+
 struct sexpr
 {
     static sexpr read(const string& text)
@@ -199,130 +185,5 @@ struct sexpr
     bool empty() const { return fields.empty(); }
     vector<sexpr_field> fields;
 };
-sexpr_field& access(sexpr& s, size_t index) { return s[index]; }
-const sexpr_field& access(const sexpr& s, size_t index) { return s[index]; }
-size_t get_size(const sexpr& s) { return s.size(); }
-
-bool is_sexpr_with_name(const sexpr_field& sf, const string& name)
-{
-    return sf.is_tree() && sf.size() > 0 && sf[0].is_leaf() && sf[0].string() == name;
-}
-
-vector<double> read_data(const string& filename)
-{
-    ifstream file(filename);
-    if (!file.is_open())
-        throw runtime_error("read_data: Couldn't open file \"" + filename + "\".");
-    vector<double> res;
-    for (;;){
-        double d; file >> d;
-        if (file.eof()) break;
-        res.push_back(d);
-    }
-    return move(res);
-}
-
-void pop_path(string& path)
-{
-    if (path.empty())
-        return;
-    if (path.back() == '/' || path.back() == '\\')
-        path.pop_back();
-    while (path.back() != '/' && path.back() != '\\')
-        path.pop_back();
-}
-
-string path_relative_to(string rel_path, string abs_path)
-{
-    for (;;) {
-        if (rel_path.find("./") == 0)
-            rel_path = rel_path.substr(2);
-        else if (rel_path.find("../") == 0){
-            rel_path = rel_path.substr(3);
-            pop_path(abs_path);
-        } else if (rel_path == "."){
-            rel_path.clear();
-            break;
-        } else if (rel_path == ".."){
-            rel_path.clear();
-            pop_path(abs_path);
-            break;
-        } else
-            break;
-    }
-    if (abs_path.empty() || abs_path.back() != '/')
-        abs_path.push_back('/');
-    return abs_path + rel_path;
-}
-
-/*bool matches(const sexpr_field& s, const sexpr& pattern)
-{
-    if (pattern.size() != 1)
-        return false;
-    if (pattern[0].is_leaf()){
-        if (!s.is_leaf())
-            return false;
-        const string& expected = pattern[0].string();
-        if (expected == "%v")
-            return true;
-        else
-            return expected == s.string();
-    } else {
-        if (!s.is_tree())
-            return false;
-        const sexpr& expected = pattern[0].sexpr();
-        const sexpr& actual = s.sexpr();
-        size_t expi = 0, acti = 0, expsz = expected.size(), actsz = actual.size();
-        for (; expi < expsz && acti < actsz; ++expi, ++acti){
-            if (expected[expi].is_leaf()){
-                const string& cur_expected = expected[expi].string();
-                if (cur_expected.size() > 1 && cur_expected[0] == '%'){
-                    if (cur_expected[1] == 'v'){
-                        string rest = cur_expected.substr(2);
-                        if (rest == "..."){
-                            for (; acti < actsz; ++acti)
-                                if (!actual[acti].is_leaf())
-                                    return false;
-                            expi = expsz;
-                            break;
-                        } else if (!actual[acti].is_leaf())
-                            return false;
-                        continue;
-                    } else if (cur_expected[1] == 's'){
-                        string rest = cur_expected.substr(2);
-                        if (rest == "..."){
-                            for (; acti < actsz; ++acti)
-                                if (!actual[acti].is_tree())
-                                    return false;
-                            expi = expsz;
-                            break;
-                        } else if (!actual[acti].is_tree())
-                            return false;
-                        continue;
-                    } else if (cur_expected[1] == '?'){
-                        string rest = cur_expected.substr(2);
-                        if (rest == "..."){
-                            acti = actsz;
-                            expi = expsz;
-                            break;
-                        }
-                        continue;
-                    }
-                }
-                if (!actual[acti].is_leaf() || actual[acti].string() != cur_expected)
-                    return false;
-            } else
-                return matches(actual[acti], expected[expi].sexpr());
-        }
-        if (expi != expsz || acti != actsz)
-            return false;
-        return true;
-    }
-}
-
-bool matches(const sexpr_field& s, const string& pattern)
-{
-    return matches(s, sexpr::read(pattern));
-}*/
 
 } //namespace util

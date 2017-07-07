@@ -1,0 +1,12 @@
+nnet-codegen
+(define w (data
+  0 0 1 1 0 1
+  1 1 0 0 1 0
+  1 1 1 1 0 0
+))
+(define b (data
+  7 -2 -6
+))
+(network
+  (input 6 (fixed 1 8))
+  (fcbin (output 3) (weights $w) (simd 3) (biases $b)))

@@ -1,3 +1,5 @@
+use std.textio.all;
+
 library ieee;
 use ieee.std_logic_1164.ALL;
 use ieee.numeric_std.ALL;
@@ -11,6 +13,7 @@ package util is
 function bits_needed(n : integer) return integer;
 
 type reals is array(natural range <>) of real;
+type integers is array(natural range <>) of integer;
 
 function get(buf : std_logic_vector; index : integer; example : sfixed) return sfixed;
 procedure set(signal buf : out std_logic_vector; index : integer; value : sfixed);
@@ -40,14 +43,23 @@ function shift_range(x : std_logic_vector; n : integer) return std_logic_vector;
 --procedure write(variable s : out string; w : in string; variable pos : inout integer);
 function write(s : string; w : in string; pos : integer) return string;
 
+impure function synth_assert(cond : boolean; msg : string) return integer;
+
+function standard_range(vec : std_logic_vector) return std_logic_vector;
+
 end util;
 
 
 package body util is
 
+--function bits_needed(n : integer) return integer is
+--begin
+--    return integer(ceil(log2(real(n) + 0.5)));
+--end bits_needed;
+
 function bits_needed(n : integer) return integer is
 begin
-    return integer(ceil(log2(real(n) + 0.5)));
+    return integer(floor(log2(real(n)))) + 1;
 end bits_needed;
 
 function get(buf : std_logic_vector; index : integer; example : sfixed) return sfixed is
@@ -156,5 +168,20 @@ begin
     end loop;
     return ss;
 end write;
+
+impure function synth_assert(cond : boolean; msg : string) return integer is
+    file f : text;
+begin
+    assert cond report msg severity failure;
+    if not cond then file_open(f, "Error: " & msg, read_mode); end if;
+    return 0;
+end;
+
+function standard_range(vec : std_logic_vector) return std_logic_vector is
+    variable shifted : std_logic_vector(vec'length - 1 downto 0);
+begin
+    shifted(shifted'range) := vec(vec'range);
+    return shifted;
+end standard_range;
 
 end util;

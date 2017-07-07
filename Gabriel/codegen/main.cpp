@@ -127,7 +127,7 @@ int main(int argc, char* argv[])
                         ++i;
                         break;
                     } else if (interface == nullptr){
-                        interface = generate_interface(parse_interface(sexpr::read_file(args[i])));//read_data(actual_path + "/realnet/translated-mnist-ex/index-120-P-input.nn");
+                        interface = generate_interface(parse_interface(sexpr::read_file(args[i])));
                     } else {
                         if (args[i] != "_"){
                             if (args[i] == "*")
@@ -236,7 +236,7 @@ void toy_network2()
     auto interface = feed_interface();//sim_interface({ 0.270478, 0.808408, 0.463890, 0.291382, 0.800599, 0.203051 });
     ofstream file("C:/Users/gademb/stage2017/Gabriel/nnet/system.vhd", ios::trunc);
     if (!file.is_open())
-        throw runtime_error("Can't open toynetwork.vhd.");
+        throw runtime_error("Can't open system.vhd.");
     file << gen_code(network, interface);
 }
 
@@ -251,14 +251,28 @@ void real_network()
     auto interface = block_interface();//test_interface(read_data(actual_path + "/realnet/translated-mnist-ex/index-217-N-input.nn"));
     ofstream file("C:/Users/gademb/stage2017/Gabriel/nnet/system.vhd", ios::trunc);
     if (!file.is_open())
-        throw runtime_error("Can't open realnet.vhd.");
+        throw runtime_error("Can't open system.vhd.");
+    file << gen_code(network, interface);
+}
+
+void toy_network_bin()
+{
+    auto network = parse(sexpr::read_file("C:/Users/gademb/stage2017/Gabriel/codegen/toynetwork2.nn"))[0];
+    assert_valid(network);
+    for (double out : gen_feedforward(network)({ 0.0, 1.0, 1.0, 0.0, 1.0, 0.0 }))
+        cout << out << ' ';
+    auto interface = test_interface({ 0.0, 1.0, 1.0, 0.0, 1.0, 0.0 });
+    ofstream file("C:/Users/gademb/stage2017/Gabriel/nnet/system.vhd", ios::trunc);
+    if (!file.is_open())
+        throw runtime_error("Can't open system.vhd.");
     file << gen_code(network, interface);
 }
 
 int main()
 {
-    toy_network2();
+    //toy_network2();
     //real_network();
+    toy_network_bin();
 }
 
 #endif // COMPILED_AS_TOOL

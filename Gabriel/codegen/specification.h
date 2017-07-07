@@ -3,6 +3,8 @@
 #include <vector>
 #include <string>
 #include <stdexcept>
+#include <unordered_map>
+#include <memory>
 
 namespace gen
 {
@@ -125,71 +127,68 @@ struct system_specification
     size_t input_width;
     pair<int, int> input_spec;
 };
-system_specification* clone_system_specification(const system_specification& other)
-{
-    return new system_specification(other);
-}
-void delete_system_specification(system_specification* s)
-{
-    delete s;
-}
 
-system_specification input(size_t input_width, pair<int, int> input_spec)
+inline system_specification input(size_t input_width, pair<int, int> input_spec)
 {
     return system_specification{ vector<layer_specification>{}, input_width, input_spec };
 }
 
-system_specification neuron()
+inline system_specification neuron()
 {
     return system_specification{};
 }
 
-auto spec(int int_part, int frac_part)
+inline auto spec(int int_part, int frac_part)
 {
     return make_pair(int_part, frac_part);
 }
-auto int_pair(int a, int b)
+inline auto int_pair(int a, int b)
 {
     return make_pair(a, b);
 }
 
 struct Output { size_t output_width; pair<int, int> output_spec; };
-auto output(size_t output_width, pair<int, int> output_spec)
+struct BinOutput { size_t output_width; };
+inline auto output(size_t output_width, pair<int, int> output_spec)
 {
     return Output{ output_width, output_spec };
 }
+inline auto output(size_t output_width)
+{
+    return BinOutput{ output_width };
+}
 
 struct Weights { vector<double> w; pair<int, int> w_spec; };
-auto weights(const vector<double>& w, pair<int, int> w_spec)
+struct BinWeights { vector<bool> w; };
+inline auto weights(const vector<double>& w, pair<int, int> w_spec)
 {
     return Weights{ w, w_spec };
 }
-auto weights(const vector<vector<double>>& w2d, pair<int, int> w_spec)
+inline auto weights(const vector<bool>& w)
 {
-    vector<double> w;
-    size_t expected_row_size = size_t(-1);
-    for (const vector<double>& row : w2d){
-        if (expected_row_size == size_t(-1))
-            expected_row_size = row.size();
-        else if (row.size() != expected_row_size)
-            throw runtime_error("weights: Inconsistent row sizes (" + to_string(expected_row_size) + " and " + to_string(row.size()) + ").");
-        copy(row.begin(), row.end(), back_inserter(w));
-    }
-    return Weights{ w, w_spec };
+    return BinWeights{ w };
 }
 
+struct Biases { vector<int> b; };
+inline auto biases(const vector<int>& b)
+{
+    return Biases{ b };
+}
+
+auto weights(const vector<vector<double>>& w2d, pair<int, int> w_spec);
+
 struct Simd { size_t simd_width; };
-auto simd(size_t simd_width)
+inline auto simd(size_t simd_width)
 {
     return Simd{ simd_width };
 }
 
-system_specification operator|(system_specification sys, layer_specification&& ls)
+inline system_specification operator|(system_specification sys, layer_specification&& ls)
 {
     sys.parts.push_back(move(ls));
     return move(sys);
 }
-system_specification operator|(system_specification sys, const layer_specification& ls)
+inline system_specification operator|(system_specification sys, const layer_specification& ls)
 {
     sys.parts.push_back(ls);
     return move(sys);

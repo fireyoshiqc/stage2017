@@ -1,10 +1,10 @@
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 
-entity interlayer is
+entity fc_to_fc_interlayer is
 generic(
-    width : integer := 6;
-    word_size : integer := 7
+    width : integer;
+    word_size : integer
 );
 port(
     clk, rst : in std_logic;
@@ -13,9 +13,9 @@ port(
     previous_a : in std_logic_vector(width * word_size - 1 downto 0);
     next_a : out std_logic_vector(width * word_size - 1 downto 0)
 );
-end interlayer;
+end fc_to_fc_interlayer;
 
-architecture interlayer of interlayer is
+architecture fc_to_fc_interlayer of fc_to_fc_interlayer is
 begin
 process(clk, rst)
     variable pass : std_logic;
@@ -33,4 +33,4 @@ begin
         end if;
     end if;
 end process;
-end interlayer;
+end fc_to_fc_interlayer;

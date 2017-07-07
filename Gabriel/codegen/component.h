@@ -8,6 +8,9 @@
 #include <algorithm>
 #include <memory>
 #include <cmath>
+#include <typeindex>
+#include <unordered_map>
+#include <iostream>
 
 namespace gen
 {
@@ -19,16 +22,8 @@ inline size_t global_counter()
     return val++;
 };
 
-size_t bits_needed(size_t maxval) { return ceil(log2(maxval + 0.5)); }
-size_t bits_needed_for_max_int_part_signed(const vector<double>& v)
-{
-    if (v.empty())
-        return 1;
-    double absmax = abs(*max_element(v.begin(), v.end(), [](double a, double b){ return abs(a) < abs(b); }));
-    if (absmax == 0)
-        absmax = 1;
-    return 2 + floor(log2(absmax));
-}
+inline size_t bits_needed(size_t maxval) { return ceil(log2(maxval + 0.5)); }
+size_t bits_needed_for_max_int_part_signed(const vector<double>& v);
 
 enum class Sem { clock, reset, main_input, main_output, sig_in_back, sig_in_front, sig_out_back, sig_out_front,
                  side_input, side_output, sig_in_side, sig_out_side, offset_intake, offset_outtake,
@@ -77,27 +72,15 @@ struct data_type
     int range_high, range_low;
     bool ranged;
 };
-data_type std_logic_type("std_logic", false);
-data_type integer_type("integer", false, +[](const polyvalue& v){
-    return to_string(int(v[0]));
-});
-data_type string_type("string", false, +[](const polyvalue& v){
-    return v.str;
-});
-data_type fixed_spec_type("fixed_spec", false, +[](const polyvalue& v){
-    return "fixed_spec(fixed_spec'(int => " + to_string(int(v[0])) + ", frac => " + to_string(int(v[1])) + "))";
-});
-data_type reals_type("reals", false, +[](const polyvalue& v){
-    stringstream ss;
-    ss << "reals(reals'( ";
-    for (size_t i = 0, sz = v.num.size(); i < sz; ++i)
-        ss << fixed << setprecision(7) << v[i] << (i < sz - 1 ? ", " : "");
-    ss << "))";
-    return ss.str();
-});
-data_type std_logic_vector_type("std_logic_vector", true);
-data_type unsigned_type("unsigned", true);
-data_type sfixed_type("sfixed", true);
+extern data_type std_logic_type;
+extern data_type integer_type;
+extern data_type string_type;
+extern data_type fixed_spec_type;
+extern data_type reals_type;
+extern data_type std_logic_vector_type;
+extern data_type unsigned_type;
+extern data_type sfixed_type;
+extern data_type integers_type;
 
 struct datum
 {
@@ -122,7 +105,8 @@ struct datum
     Sem sem;
     bool is_in;
 };
-datum invalid_datum("INVALID");
+
+extern datum invalid_datum;
 
 template<typename Container>
 datum& find_by(Container&& cont, Sem sem)
@@ -210,35 +194,23 @@ end component;
     unique_ptr<component> prepended;
 };
 
-void system::propagate()
+struct layer_component : public component
 {
-    for (size_t i = 0; i < components.size() - 1; ++i)
-        components[i + 1]->propagate(*components[i]);
-}
-
-string system::chain_main()
-{
-    stringstream ss;
-    for (size_t i = 0; i < components.size() - 1; ++i){
-        ss << components[i + 1]->demand_signal(Sem::main_input) << " <= " << components[i]->demand_signal(Sem::main_output) << ";\n"
-           << components[i]->demand_signal(Sem::sig_in_front) << " <= " << components[i + 1]->demand_signal(Sem::sig_out_back) << ";\n"
-           << components[i + 1]->demand_signal(Sem::sig_in_back) << " <= " << components[i]->demand_signal(Sem::sig_out_front) << ";\n"
-           << components[i]->chain_internal();
+    layer_component(type_index type, string name, string instance_name, vector<datum> generic, vector<datum> port)
+        : component(move(name), move(instance_name), move(generic), move(port)), id(id_of(type)) {}
+    uint8_t get_id() const { return id; }
+    static uint8_t id_of(type_index type)
+    {
+        static uint8_t counter = 0;
+        static unordered_map<type_index, uint8_t> type_to_id_map;
+        auto it = type_to_id_map.find(type);
+        if (it == type_to_id_map.end()){
+            type_to_id_map.emplace(type, counter++);
+            return counter - 1;
+        }
+        return it->second;
     }
-    ss << components[components.size() - 1]->chain_internal();
-    return ss.str();
-}
-
-string system::chain_side()
-{
-    stringstream ss;
-    for (size_t i = 0; i < components.size() - 1; ++i){
-        ss << components[i + 1]->demand_signal(Sem::main_input) << " <= " << components[i]->demand_signal(Sem::main_output) << ";\n"
-           << components[i + 1]->demand_signal(Sem::sig_in_back) << " <= " << components[i]->demand_signal(Sem::sig_out_front) << ";\n"
-           << components[i]->chain_internal();
-    }
-    ss << components[components.size() - 1]->chain_internal();
-    return ss.str();
-}
+    uint8_t id;
+};
 
 } //namespace gen

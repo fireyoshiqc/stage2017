@@ -39,6 +39,13 @@ end fc_layer;
 
 architecture fc_layer of fc_layer is
 
+    constant check1 : integer :=
+        synth_assert(simd_width > 0, "simd_width (" & integer'image(simd_width) & ") must be positive.");
+	constant check2 : integer :=
+        synth_assert(input_width >= simd_width, "simd_width (" & integer'image(simd_width) & ") cannot be greater than input_width (" & integer'image(input_width) & ").");
+	constant check3 : integer :=
+	    synth_assert(input_width mod simd_width = 0, "input_width (" & integer'image(input_width) & ") not a multiple of simd_width (" & integer'image(simd_width) & ").");
+
 component fc_controller is
 generic(
     input_width : integer;

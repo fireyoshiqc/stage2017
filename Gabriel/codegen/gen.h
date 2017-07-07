@@ -15,6 +15,7 @@
 #include "interface.h"
 #include "specification.h"
 #include "dynamic.h"
+#include "dummy.h"
 
 namespace gen
 {
@@ -51,12 +52,12 @@ public:
 
 system_str_parts process(system& sys, size_t input_width, pair<int, int> input_spec)
 {
-    sys.push_front(make_unique<component>("DUMMY", "DUMMY", vector<datum>{
+    sys.push_front(unique_ptr<component>(new dummy_layer(vector<datum>{
         datum("output_width", integer_type,    Sem::output_width, { double(input_width) }),
         datum("output_spec",  fixed_spec_type, Sem::output_spec,  { double(input_spec.first), double(input_spec.second) }),
     }, vector<datum>{
         datum("output", sfixed_type.with_range(input_width * (input_spec.first + input_spec.second), 0), Sem::main_output),
-    }));
+    })));
     sys.propagate();
     sys.pop_front();
     sys.propagate();

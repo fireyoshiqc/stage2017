@@ -133,3 +133,4 @@ can be anything in the "Currently available interfaces" section, and "*args*..."
 - Test, with the form (interface test *data*), where *data* lists the input values. This is used for real testing on a zedboard
   where the middle button starts the process, the 8 switches are used to select the output value and the 8 leds display the 8 lowest bits
   of the selected output value.
+- Feed, with the form (interface feed). This generates a module capable of communicating inputs and outputs with the PS through GPIO.
