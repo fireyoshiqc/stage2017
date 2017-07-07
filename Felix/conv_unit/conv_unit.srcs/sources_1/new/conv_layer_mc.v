@@ -25,9 +25,9 @@ module conv_layer_mc
     parameter integer bram_depth = 784,
     parameter integer stride = 1,
     parameter integer filter_size = 2,
-    parameter integer filter_nb = 2,
+    parameter integer filter_nb = 1,
     parameter integer input_size = 3,
-    parameter integer channels = 2,
+    parameter integer channels = 1,
     parameter integer dsp_alloc = 1,
     parameter integer conv_res_size = ((input_size-filter_size)/stride) + 1,
     parameter integer input_int_part = 0, // int_part=1 means a signed number between [0,1]
@@ -36,7 +36,7 @@ module conv_layer_mc
     parameter integer weight_int_part = 1,
     parameter integer weight_frac_part = 8,
     parameter integer bias_int_part = 1,
-    parameter integer bias_frac_part = 8,
+    parameter integer bias_frac_part = 12,
     parameter integer out_int_part = 0,
     parameter integer out_frac_part = 8
     )
@@ -69,11 +69,13 @@ module conv_layer_mc
 
     reg [2:0] operation = 0;
     reg [channels * (weight_int_part+weight_frac_part) - 1:0] conv_filter [filter_size**2 - 1 : 0];
-    reg signed [clogb2(round_to_next_two(channels*filter_size**2))+(input_int_part+weight_int_part+input_frac_part+weight_frac_part):0] sum = 0;
+    reg signed [clogb2(round_to_next_two(channels*filter_size**2))+imax(bias_int_part+bias_frac_part, input_int_part+weight_int_part+input_frac_part+weight_frac_part):0] sum = 0;
+    reg signed [clogb2(round_to_next_two(channels*filter_size**2))+imax(bias_int_part+bias_frac_part, input_int_part+weight_int_part+input_frac_part+weight_frac_part):0] lsum = 0;
     // Not -1, because we need the sign bit in case it falls below zero
     
-    reg signed [input_int_part+input_frac_part-1:0] s_input;
+    reg signed [input_int_part+input_frac_part:0] s_input; //Add one to add a '0' as MSB.
     reg signed [weight_int_part+weight_frac_part-1:0] s_weight;
+    reg signed [bias_int_part+bias_frac_part-1:0] s_bias;
     
     
     always @(posedge clk) begin
@@ -110,9 +112,9 @@ module conv_layer_mc
                 
                 for (channel = clocked_channel; channel < clocked_channel+dsp_alloc; channel = channel + 1) begin
                     // It is assumed weights have a bigger integer part than inputs since they're signed
-                    s_input = {{(weight_int_part-input_int_part){1'b0}}, {din[channel*(input_int_part+input_frac_part) +: (input_int_part+input_frac_part)]}};
+                    s_input = {{1'b0}, {din[channel*(input_int_part+input_frac_part) +: (input_int_part+input_frac_part)]}};
                     s_weight = conv_filter[clocked_i*filter_size+clocked_j][channel*(weight_int_part+weight_frac_part) +: (weight_int_part+weight_frac_part)];
-                    sum = sum + s_input * s_weight;    
+                    sum = sum + (s_input << imax(weight_frac_part-input_frac_part, 0)) * (s_weight << imax(input_frac_part-weight_frac_part, 0));    
                 end
                
                 if (channel < channels) begin
@@ -129,8 +131,19 @@ module conv_layer_mc
                             clocked_i = 0;
                             wren[conv_k]= 1'b1;
                             //out_bias <= biases[conv_k*8 +: 8];
-                            //sum = sum + biases[conv_k*8 +: 8];
-                            dout[conv_k*8 +: 8] = sum[(clogb2(round_to_next_two(channels*filter_size**2))+16)-1 -: 8]+sum[(clogb2(round_to_next_two(channels*filter_size**2))+8)-1];
+                            s_bias = biases[conv_k*(bias_int_part+bias_frac_part) +: (bias_int_part+bias_frac_part)];
+                            $display(sum << imax(bias_frac_part-(input_frac_part+weight_frac_part), 0));
+                            sum = (sum << imax(bias_frac_part-(input_frac_part+weight_frac_part), 0)) + (s_bias << imax((input_frac_part+weight_frac_part)-bias_frac_part, 0));
+                            lsum = sum;
+                            
+                            // STILL NEEDS SOME WORK TO DETERMINE BIT-LENGTH TO KEEP
+                            // RELU FUNCTION
+                            if (sum[imax(input_frac_part+weight_frac_part, bias_frac_part)] == 1'b1) begin
+                                sum = 0; //NEGATIVE OR OVERFLOW THAT NEEDS HANDLING
+                            end
+                            dout[conv_k*8 +: 8] = sum[imax(input_frac_part+weight_frac_part, bias_frac_part) - 1 : 0];
+                            // END OF THING THAT NEEDS WORK :)
+                            
                             sum = 0;
                             conv_j = conv_j + 1;
                             if (conv_j >= conv_res_size) begin
@@ -205,13 +218,11 @@ module conv_layer_mc
                 out_addr <= 0;
                 wren <= 0;
                 for (filter_itr = 0; filter_itr<filter_size**2; filter_itr = filter_itr+1) begin
-                    conv_filter[filter_itr] <= filters[(conv_k*(filter_size**2) + filter_itr)*channels*8 +: channels*8];
+                    conv_filter[filter_itr] <= filters[(conv_k*(filter_size**2) + filter_itr)*channels*(weight_int_part+weight_frac_part) +: channels*(weight_int_part+weight_frac_part)];
                 end
                 ready <= 1'b0;
                 done <= 1'b0;
-
-                operation <= 3'b001;
-                
+                operation <= 3'b001;           
             end
 
             3'b100: begin // DONE (WAIT)
