@@ -84,39 +84,3 @@ fprq_relu = float(rq_relu)*step*(2**(8+math.ceil(math.log2(len(int_input)))))
 print("rq_relu   : ", hex(rq_relu))
 print("fprq_relu : ", fprq_relu)
 print("DEVIATION : " + str(abs(float(fprq_relu-fp_relu))/(max_r-min_r)*100) + " %")
-
-
-
-
-'''fp_norelu = np.dot(np.array(fp_input), np.array(fp_weights).T) + fp_bias
-fp_relu = 0
-if fp_norelu > 0:
-    fp_relu = fp_norelu
-print(fp_relu)
-print(int_weights)
-int_norelu = float(np.dot(np.array(int_input), np.array(int_weights).T)) / (2**16)
-zero_relu = float(np.dot(np.array(int_input), np.array([zero_weights, zero_weights, zero_weights, zero_weights]).T)) / (2**16)
-
-print(int_norelu)
-print(zero_relu)
-
-adj_bias = float(int(int_bias * bscale))/(2**16)
-int_norelu_with_bias = int_norelu + adj_bias
-zero_bias = float(int(zero_biases * bscale))/(2**16)
-zero_relu_with_bias = zero_relu + zero_bias
-
-print(int_norelu_with_bias)
-print(zero_relu_with_bias)
-print(int(int_norelu_with_bias*(2**8)))
-print(int(zero_relu_with_bias*(2**8)))
-
-max_out = qtuple[4]*1.0*4+btuple[4]
-min_out = qtuple[3]*0.0*4+btuple[3]
-
-print(max_out)
-print(min_out)
-print(min_out + 148.0/255.0 * max_out)
-print(min_out + 53.0/255.0 * max_out)
-
-'''
-
