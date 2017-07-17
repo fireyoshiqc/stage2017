@@ -28,7 +28,7 @@
     <Option Name="IPStaticSourceDir" Val="$PIPUSERFILESDIR/ipstatic"/>
     <Option Name="EnableBDX" Val="FALSE"/>
     <Option Name="DSANumComputeUnits" Val="16"/>
-    <Option Name="WTXSimLaunchSim" Val="874"/>
+    <Option Name="WTXSimLaunchSim" Val="882"/>
     <Option Name="WTModelSimLaunchSim" Val="0"/>
     <Option Name="WTQuestaLaunchSim" Val="0"/>
     <Option Name="WTIesLaunchSim" Val="0"/>
@@ -57,6 +57,13 @@
           <Attr Name="UsedIn" Val="simulation"/>
         </FileInfo>
       </File>
+      <File Path="$PSRCDIR/sources_1/new/bram_pad_interlayer.v">
+        <FileInfo>
+          <Attr Name="UsedIn" Val="synthesis"/>
+          <Attr Name="UsedIn" Val="implementation"/>
+          <Attr Name="UsedIn" Val="simulation"/>
+        </FileInfo>
+      </File>
       <File Path="$PSRCDIR/sources_1/new/conv_layer_mc.v">
         <FileInfo>
           <Attr Name="UsedIn" Val="synthesis"/>
@@ -64,23 +71,21 @@
           <Attr Name="UsedIn" Val="simulation"/>
         </FileInfo>
       </File>
-      <File Path="$PSRCDIR/sources_1/new/bram_pad_interlayer.v">
+      <File Path="$PSRCDIR/sources_1/new/maxpool_layer_mc.v">
         <FileInfo>
-          <Attr Name="AutoDisabled" Val="1"/>
+          <Attr Name="UsedIn" Val="synthesis"/>
+          <Attr Name="UsedIn" Val="implementation"/>
+          <Attr Name="UsedIn" Val="simulation"/>
+        </FileInfo>
+      </File>
+      <File Path="$PSRCDIR/sources_1/new/convtest_nn.v">
+        <FileInfo>
           <Attr Name="UsedIn" Val="synthesis"/>
           <Attr Name="UsedIn" Val="implementation"/>
           <Attr Name="UsedIn" Val="simulation"/>
         </FileInfo>
       </File>
       <File Path="$PSRCDIR/sources_1/new/conv_to_fc_interlayer.v">
-        <FileInfo>
-          <Attr Name="AutoDisabled" Val="1"/>
-          <Attr Name="UsedIn" Val="synthesis"/>
-          <Attr Name="UsedIn" Val="implementation"/>
-          <Attr Name="UsedIn" Val="simulation"/>
-        </FileInfo>
-      </File>
-      <File Path="$PSRCDIR/sources_1/new/maxpool_layer_mc.v">
         <FileInfo>
           <Attr Name="AutoDisabled" Val="1"/>
           <Attr Name="UsedIn" Val="synthesis"/>
@@ -136,19 +141,57 @@
           <Attr Name="UsedIn" Val="simulation"/>
         </FileInfo>
       </File>
-      <File Path="$PSRCDIR/sources_1/new/convtest_w2.txt"/>
-      <File Path="$PSRCDIR/sources_1/new/convtest_b3.txt"/>
-      <File Path="$PSRCDIR/sources_1/new/convtest_b2.txt"/>
-      <File Path="$PSRCDIR/sources_1/new/convtest_w3.txt"/>
-      <File Path="$PSRCDIR/sources_1/new/convtest_b0.txt"/>
-      <File Path="$PSRCDIR/sources_1/new/convtest_w1.txt"/>
-      <File Path="$PSRCDIR/sources_1/new/convtest_w0.txt"/>
-      <File Path="$PSRCDIR/sources_1/new/convtest_b1.txt"/>
+      <File Path="$PSRCDIR/sources_1/imports/Python/convtest_b0.txt">
+        <FileInfo>
+          <Attr Name="ImportPath" Val="$PPRDIR/../Python/convtest_b0.txt"/>
+          <Attr Name="ImportTime" Val="1500305879"/>
+        </FileInfo>
+      </File>
+      <File Path="$PSRCDIR/sources_1/imports/Python/convtest_b1.txt">
+        <FileInfo>
+          <Attr Name="ImportPath" Val="$PPRDIR/../Python/convtest_b1.txt"/>
+          <Attr Name="ImportTime" Val="1500305879"/>
+        </FileInfo>
+      </File>
+      <File Path="$PSRCDIR/sources_1/imports/Python/convtest_w0.txt">
+        <FileInfo>
+          <Attr Name="ImportPath" Val="$PPRDIR/../Python/convtest_w0.txt"/>
+          <Attr Name="ImportTime" Val="1500305879"/>
+        </FileInfo>
+      </File>
+      <File Path="$PSRCDIR/sources_1/imports/Python/convtest_w1.txt">
+        <FileInfo>
+          <Attr Name="ImportPath" Val="$PPRDIR/../Python/convtest_w1.txt"/>
+          <Attr Name="ImportTime" Val="1500305879"/>
+        </FileInfo>
+      </File>
+      <File Path="$PSRCDIR/sources_1/imports/Python/convtest_w2.txt">
+        <FileInfo>
+          <Attr Name="ImportPath" Val="$PPRDIR/../Python/convtest_w2.txt"/>
+          <Attr Name="ImportTime" Val="1500305879"/>
+        </FileInfo>
+      </File>
+      <File Path="$PSRCDIR/sources_1/imports/Python/convtest_b3.txt">
+        <FileInfo>
+          <Attr Name="ImportPath" Val="$PPRDIR/../Python/convtest_b3.txt"/>
+          <Attr Name="ImportTime" Val="1500305879"/>
+        </FileInfo>
+      </File>
+      <File Path="$PSRCDIR/sources_1/imports/Python/convtest_b2.txt">
+        <FileInfo>
+          <Attr Name="ImportPath" Val="$PPRDIR/../Python/convtest_b2.txt"/>
+          <Attr Name="ImportTime" Val="1500305879"/>
+        </FileInfo>
+      </File>
+      <File Path="$PSRCDIR/sources_1/imports/Python/convtest_w3.txt">
+        <FileInfo>
+          <Attr Name="ImportPath" Val="$PPRDIR/../Python/convtest_w3.txt"/>
+          <Attr Name="ImportTime" Val="1500305879"/>
+        </FileInfo>
+      </File>
       <Config>
         <Option Name="DesignMode" Val="RTL"/>
-        <Option Name="TopModule" Val="conv_layer_mc"/>
-        <Option Name="TopLib" Val="xil_defaultlib"/>
-        <Option Name="TopRTLFile" Val="$PSRCDIR/sources_1/new/conv_layer_mc.v"/>
+        <Option Name="TopModule" Val="convtest_nn"/>
       </Config>
     </FileSet>
     <FileSet Name="constrs_1" Type="Constrs" RelSrcDir="$PSRCDIR/constrs_1">
@@ -188,11 +231,59 @@
       <File Path="$PSRCDIR/sources_1/new/convtest_w1.txt"/>
       <File Path="$PSRCDIR/sources_1/new/convtest_w0.txt"/>
       <File Path="$PSRCDIR/sources_1/new/convtest_b1.txt"/>
+      <File Path="$PSRCDIR/sim_1/imports/Python/convtest_b0.txt">
+        <FileInfo>
+          <Attr Name="ImportPath" Val="$PPRDIR/../Python/convtest_b0.txt"/>
+          <Attr Name="ImportTime" Val="1500305879"/>
+        </FileInfo>
+      </File>
+      <File Path="$PSRCDIR/sim_1/imports/Python/convtest_b1.txt">
+        <FileInfo>
+          <Attr Name="ImportPath" Val="$PPRDIR/../Python/convtest_b1.txt"/>
+          <Attr Name="ImportTime" Val="1500305879"/>
+        </FileInfo>
+      </File>
+      <File Path="$PSRCDIR/sim_1/imports/Python/convtest_w0.txt">
+        <FileInfo>
+          <Attr Name="ImportPath" Val="$PPRDIR/../Python/convtest_w0.txt"/>
+          <Attr Name="ImportTime" Val="1500305879"/>
+        </FileInfo>
+      </File>
+      <File Path="$PSRCDIR/sim_1/imports/Python/convtest_w1.txt">
+        <FileInfo>
+          <Attr Name="ImportPath" Val="$PPRDIR/../Python/convtest_w1.txt"/>
+          <Attr Name="ImportTime" Val="1500305879"/>
+        </FileInfo>
+      </File>
+      <File Path="$PSRCDIR/sim_1/imports/Python/convtest_w2.txt">
+        <FileInfo>
+          <Attr Name="ImportPath" Val="$PPRDIR/../Python/convtest_w2.txt"/>
+          <Attr Name="ImportTime" Val="1500305879"/>
+        </FileInfo>
+      </File>
+      <File Path="$PSRCDIR/sim_1/imports/Python/convtest_b3.txt">
+        <FileInfo>
+          <Attr Name="ImportPath" Val="$PPRDIR/../Python/convtest_b3.txt"/>
+          <Attr Name="ImportTime" Val="1500305879"/>
+        </FileInfo>
+      </File>
+      <File Path="$PSRCDIR/sim_1/imports/Python/convtest_b2.txt">
+        <FileInfo>
+          <Attr Name="ImportPath" Val="$PPRDIR/../Python/convtest_b2.txt"/>
+          <Attr Name="ImportTime" Val="1500305879"/>
+        </FileInfo>
+      </File>
+      <File Path="$PSRCDIR/sim_1/imports/Python/convtest_w3.txt">
+        <FileInfo>
+          <Attr Name="ImportPath" Val="$PPRDIR/../Python/convtest_w3.txt"/>
+          <Attr Name="ImportTime" Val="1500305879"/>
+        </FileInfo>
+      </File>
+      <File Path="$PSRCDIR/sources_1/new/imagedata_7.txt"/>
       <Config>
         <Option Name="DesignMode" Val="RTL"/>
-        <Option Name="TopModule" Val="conv_layer_mc"/>
+        <Option Name="TopModule" Val="convtest_nn"/>
         <Option Name="TopLib" Val="xil_defaultlib"/>
-        <Option Name="TopRTLFile" Val="$PSRCDIR/sources_1/new/conv_layer_mc.v"/>
         <Option Name="TransportPathDelay" Val="0"/>
         <Option Name="TransportIntDelay" Val="0"/>
         <Option Name="SrcSet" Val="sources_1"/>

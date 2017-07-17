@@ -28,10 +28,10 @@ module top_nn #(
     parameter integer c1stride = 1,
     parameter integer c2stride = 1,
     parameter integer m1stride = 1,
-    parameter integer c1filter_size = 2,
-    parameter integer c1filter_nb = 1,
-    parameter integer c2filter_size = 2,
-    parameter integer c2filter_nb = 1,
+    parameter integer c1filter_size = 3,
+    parameter integer c1filter_nb = 10,
+    parameter integer c2filter_size = 5,
+    parameter integer c2filter_nb = 10,
     parameter integer input_size = 3,
     parameter integer m1pool_size = 2,
     parameter integer c1dsp_alloc = 1,
@@ -39,12 +39,12 @@ module top_nn #(
     )
     (
     input clk,
-    input start,
-    input [input_channels*8-1:0] din,
-    input [c1filter_size**2*c1filter_nb*input_channels*8-1 : 0] c1filters,
-    input [c2filter_size**2*c2filter_nb*c1filter_nb*8-1 : 0] c2filters,
-    input [c1filter_nb*8-1 : 0] c1biases,
-    input [c2filter_nb*8-1 : 0] c2biases,
+    //input start,
+    //input [input_channels*8-1:0] din,
+    //input [c1filter_size**2*c1filter_nb*input_channels*8-1 : 0] c1filters,
+    //input [c2filter_size**2*c2filter_nb*c1filter_nb*8-1 : 0] c2filters,
+    //input [c1filter_nb*8-1 : 0] c1biases,
+    //input [c2filter_nb*8-1 : 0] c2biases,
     output ready,
     output lddone,
     output done,
@@ -63,7 +63,9 @@ module top_nn #(
     wire [9 : 0] c1addrb1;
     wire [9 : 0] c2addrb1;
     wire [9 : 0] c2addrb2;
+    wire [9 : 0] c1addrb0;
     wire c2readyb1;
+    wire [input_channels*8-1:0] b0doutc1;
     wire [c1filter_nb*8-1:0] b1doutc2;
     wire b1startc2;
     wire [clogb2(round_to_next_two(b1size))-1:0] c1rowb1;
@@ -71,24 +73,48 @@ module top_nn #(
     
     `include "functions.vh"
     
+    wire c1readyb0;
+    wire b0startc1;
+    
+    bram_pad_interlayer #(
+            .init_file("imagedata_7.txt"),
+            .zero_padding(0),
+            .layer_size(30),
+            .channels(1),
+            .data_depth(900)
+            )
+            bram0
+            (
+            .clk(clk),
+            .done(1'b1),
+            .ready(c1readyb0),
+            .wr_addr(0),
+            .rd_addr(c1addrb0),
+            .din(0),
+            .dout(b0doutc1),
+            .start(b0startc1),
+            .row(c1rowb1),
+            .wren(c1wrenb1)
+            );
+    
     conv_layer_mc #(
         .stride(c1stride),
         .filter_size(c1filter_size),
         .filter_nb(c1filter_nb),
         .input_size(input_size),
         .channels(input_channels),
-        .dsp_alloc(c1dsp_alloc)
+        .dsp_alloc(c1dsp_alloc),
+        .weight_file("convtest_w0.txt"),
+        .bias_file("convtest_b0.txt")
         )
         conv1
         (
         .clk(clk),
         .ack(c2ackc1),
-        .start(start),
-        .din(din),
-        .filters(c1filters),
-        .biases(c1biases),
+        .start(b0startc1),
+        .din(b0doutc1),
         .done(c1doneb1),
-        .ready(ready),
+        .ready(c1readyb0),
         .load_done(lddone),
         .dout(c1dinb1),
         .out_addr(c1addrb1),

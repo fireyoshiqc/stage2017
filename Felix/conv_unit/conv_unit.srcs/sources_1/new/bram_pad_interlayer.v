@@ -22,6 +22,7 @@
 
 module bram_pad_interlayer
     #(
+    parameter init_file = "",
     parameter channels = 4,
     parameter channel_width = 8,
     parameter data_depth = 784,
@@ -44,9 +45,17 @@ module bram_pad_interlayer
     
     
     `include "functions.vh"
-    
+
     integer i;
-    initial for (i=0; i<data_depth; i=i+1) bram[i]=0;
+    
+    initial begin
+        if (init_file != "") begin
+            $readmemh(init_file, bram);
+        end
+        else begin
+            for (i=0; i<data_depth; i=i+1) bram[i]=0;
+        end
+    end
     
     always @(posedge clk) begin
         

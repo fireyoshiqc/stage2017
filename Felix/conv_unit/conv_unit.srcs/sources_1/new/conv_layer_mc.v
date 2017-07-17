@@ -22,8 +22,8 @@
 
 module conv_layer_mc
     #(
-    parameter weight_file = "convtest_w0.txt",
-    parameter bias_file = "convtest_b0.txt",
+    parameter weight_file = "",
+    parameter bias_file = "",
     parameter integer bram_depth = 900,
     parameter integer stride = 1,
     parameter integer filter_size = 3,
@@ -32,13 +32,15 @@ module conv_layer_mc
     parameter integer channels = 1,
     parameter integer dsp_alloc = 1,
     parameter integer conv_res_size = ((input_size-filter_size)/stride) + 1,
+    
+    // SHOULD ALL BE LEFT LIKE THIS FOR NOW.
     parameter integer input_int_part = 0, // int_part=1 means a signed number between [0,1]
     // Usually, inputs would be unsigned (since the input goes through a ReLU before a conv layer).
     parameter integer input_frac_part = 8,
     parameter integer weight_int_part = 1,
     parameter integer weight_frac_part = 8,
     parameter integer bias_int_part = 1,
-    parameter integer bias_frac_part = 12,
+    parameter integer bias_frac_part = 8,
     parameter integer out_int_part = 0,
     parameter integer out_frac_part = 8
     )
@@ -150,7 +152,6 @@ module conv_layer_mc
                             wren[conv_k]= 1'b1;
                             //out_bias <= biases[conv_k*8 +: 8];
                             s_bias = biases[conv_k];
-                            $display(sum << imax(bias_frac_part-(input_frac_part+weight_frac_part), 0));
                             sum = (sum << imax(bias_frac_part-(input_frac_part+weight_frac_part), 0)) + (s_bias << imax((input_frac_part+weight_frac_part)-bias_frac_part, 0));
                             lsum = sum;
                             
@@ -159,7 +160,11 @@ module conv_layer_mc
                             if (sum[imax(input_frac_part+weight_frac_part, bias_frac_part)] == 1'b1) begin
                                 sum = 0; //NEGATIVE OR OVERFLOW THAT NEEDS HANDLING
                             end
-                            dout[conv_k*8 +: 8] = sum[imax(input_frac_part+weight_frac_part, bias_frac_part) - 1 : 0];
+                            // CAP THE RELU TO 1
+                            if (sum[imax(input_frac_part+weight_frac_part, bias_frac_part) +: imax(input_int_part+weight_int_part, bias_int_part)]) begin
+                                sum = 8'hff << (imax(input_frac_part+weight_frac_part, bias_frac_part)-(input_frac_part+weight_frac_part));
+                            end
+                            dout[conv_k*8 +: 8] = sum[imax(input_frac_part+weight_frac_part, bias_frac_part) - 1 : imax(input_frac_part+weight_frac_part, bias_frac_part)-(input_frac_part+weight_frac_part)];
                             // END OF THING THAT NEEDS WORK :)
                             
                             sum = 0;
