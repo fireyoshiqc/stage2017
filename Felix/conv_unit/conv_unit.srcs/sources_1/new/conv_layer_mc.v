@@ -22,11 +22,13 @@
 
 module conv_layer_mc
     #(
-    parameter integer bram_depth = 784,
+    parameter weight_file = "convtest_w0.txt",
+    parameter bias_file = "convtest_b0.txt",
+    parameter integer bram_depth = 900,
     parameter integer stride = 1,
-    parameter integer filter_size = 2,
-    parameter integer filter_nb = 1,
-    parameter integer input_size = 3,
+    parameter integer filter_size = 3,
+    parameter integer filter_nb = 10,
+    parameter integer input_size = 30,
     parameter integer channels = 1,
     parameter integer dsp_alloc = 1,
     parameter integer conv_res_size = ((input_size-filter_size)/stride) + 1,
@@ -43,8 +45,6 @@ module conv_layer_mc
     (
     input clk, ack, start,
     input [channels * (input_int_part+input_frac_part) - 1 : 0] din,
-    input [filter_size**2*filter_nb*channels*(weight_int_part+weight_frac_part)-1 : 0] filters,
-    input [filter_nb*(bias_int_part+bias_frac_part)-1 : 0] biases,
     output reg done = 1'b0,
     output reg ready = 1'b0,
     output reg load_done = 1'b0,
@@ -64,9 +64,11 @@ module conv_layer_mc
     integer clocked_channel = 0;
     integer conv_i = 0;
     integer conv_j = 0;
-    integer conv_k = 0;
+    reg [clogb2(round_to_next_two(filter_nb))-1:0] conv_k = 0;
     integer channel = 0;
-
+    
+    reg [(weight_int_part+weight_frac_part)-1 : 0] filters [filter_size**2*filter_nb*channels-1:0];
+    reg [(bias_int_part+bias_frac_part)-1 : 0] biases [filter_nb-1:0];
     reg [2:0] operation = 0;
     reg [channels * (weight_int_part+weight_frac_part) - 1:0] conv_filter [filter_size**2 - 1 : 0];
     reg signed [clogb2(round_to_next_two(channels*filter_size**2))+imax(bias_int_part+bias_frac_part, input_int_part+weight_int_part+input_frac_part+weight_frac_part):0] sum = 0;
@@ -76,6 +78,22 @@ module conv_layer_mc
     reg signed [input_int_part+input_frac_part:0] s_input; //Add one to add a '0' as MSB.
     reg signed [weight_int_part+weight_frac_part-1:0] s_weight;
     reg signed [bias_int_part+bias_frac_part-1:0] s_bias;
+    
+    integer i;
+    initial begin
+        if (weight_file != "") begin
+            $readmemh(weight_file, filters);
+        end
+        else begin
+            for (i=0; i<filter_size**2*filter_nb*channels; i=i+1) filters[i]=8'hff;
+        end
+        if (bias_file != "") begin
+            $readmemh(bias_file, biases);
+        end
+        else begin
+            for (i=0; i<filter_nb; i=i+1) biases[i]=12'hfff;
+        end
+    end
     
     
     always @(posedge clk) begin
@@ -110,14 +128,14 @@ module conv_layer_mc
                 
                 
                 
-                for (channel = clocked_channel; channel < clocked_channel+dsp_alloc; channel = channel + 1) begin
+                for (channel = 0; channel < dsp_alloc; channel = channel + 1) begin
                     // It is assumed weights have a bigger integer part than inputs since they're signed
-                    s_input = {{1'b0}, {din[channel*(input_int_part+input_frac_part) +: (input_int_part+input_frac_part)]}};
-                    s_weight = conv_filter[clocked_i*filter_size+clocked_j][channel*(weight_int_part+weight_frac_part) +: (weight_int_part+weight_frac_part)];
+                    s_input = {{1'b0}, {din[(clocked_channel+channel)*(input_int_part+input_frac_part) +: (input_int_part+input_frac_part)]}};
+                    s_weight = conv_filter[clocked_i*filter_size+clocked_j][(clocked_channel+channel)*(weight_int_part+weight_frac_part) +: (weight_int_part+weight_frac_part)];
                     sum = sum + (s_input << imax(weight_frac_part-input_frac_part, 0)) * (s_weight << imax(input_frac_part-weight_frac_part, 0));    
                 end
                
-                if (channel < channels) begin
+                if (clocked_channel+dsp_alloc < channels) begin
                     clocked_channel = clocked_channel + dsp_alloc;
                 end
                 else begin
@@ -131,7 +149,7 @@ module conv_layer_mc
                             clocked_i = 0;
                             wren[conv_k]= 1'b1;
                             //out_bias <= biases[conv_k*8 +: 8];
-                            s_bias = biases[conv_k*(bias_int_part+bias_frac_part) +: (bias_int_part+bias_frac_part)];
+                            s_bias = biases[conv_k];
                             $display(sum << imax(bias_frac_part-(input_frac_part+weight_frac_part), 0));
                             sum = (sum << imax(bias_frac_part-(input_frac_part+weight_frac_part), 0)) + (s_bias << imax((input_frac_part+weight_frac_part)-bias_frac_part, 0));
                             lsum = sum;
@@ -218,7 +236,7 @@ module conv_layer_mc
                 out_addr <= 0;
                 wren <= 0;
                 for (filter_itr = 0; filter_itr<filter_size**2; filter_itr = filter_itr+1) begin
-                    conv_filter[filter_itr] <= filters[(conv_k*(filter_size**2) + filter_itr)*channels*(weight_int_part+weight_frac_part) +: channels*(weight_int_part+weight_frac_part)];
+                    conv_filter[filter_itr] <= filters[(conv_k*(filter_size**2) + filter_itr)*channels];
                 end
                 ready <= 1'b0;
                 done <= 1'b0;
