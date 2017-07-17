@@ -10,7 +10,7 @@ maximum = max(values)
 bits = 0
 signed = 0
 print("Minimum value is :", minimum)
-if (float(minimum) < 0):
+if (float(minimum) < 0 or float(maximum) < 0):
     print("This value is below zero, adding sign bit.")
     bits += 1
     signed = 1
@@ -28,6 +28,7 @@ bits += decbits
 file = open(filename.strip(".nn")+(".txt"), "w+")
 bitstring = ""
 for value in values :
+    temp = value
     bitstring=""
     cnt = bits-signed
     while (cnt> 0):
@@ -40,19 +41,24 @@ for value in values :
             bitstring+="0"
         cnt -= 1
 
+    #print(bitstring)
     
-    if (value < 0):
-        bitstring.replace("0", "a").replace("1","0").replace("a", "1")
+    if (temp < 0):
+        bitstring = bitstring.replace("0", "a").replace("1","0").replace("a", "1")
+
+    #print(bitstring)
 
     if(signed > 0):
-        bitstring = "0" + bitstring if value >= 0 else "1" + bitstring
+        bitstring = ("0" + bitstring) if temp >= 0 else ("1" + bitstring)
     
+    print(bitstring)
     ures = int(bitstring, 2)
 
-    if(value < 0):
+    if(temp < 0):
         ures += 1
 
-    
+    if (ures > 2**bits-1):
+        ures = 0
 
     hexdata = format(ures, 'x')
 
