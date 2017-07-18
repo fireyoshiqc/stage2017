@@ -25,9 +25,9 @@ module bram_pad_interlayer
     parameter init_file = "",
     parameter channels = 4,
     parameter channel_width = 8,
-    parameter data_depth = 784,
     parameter zero_padding = 0,
-    parameter layer_size = 2 //WITHOUT PADDING
+    parameter layer_size = 2, //WITHOUT PADDING
+    parameter data_depth = (layer_size+zero_padding)**2
     )
     (
     input clk, done, ready,

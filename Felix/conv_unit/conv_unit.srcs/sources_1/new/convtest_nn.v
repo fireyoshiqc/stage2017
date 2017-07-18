@@ -51,7 +51,6 @@ wire u1startu2;
 bram_pad_interlayer #(
     .init_file("imagedata_7.txt"),
     .channels(1),
-    .data_depth(900),
     .layer_size(28)) 
 u1 (
     .clk(clk),
@@ -105,7 +104,6 @@ wire u3startu4;
     
 bram_pad_interlayer #(
     .channels(10),
-    .data_depth(784),
     .layer_size(28)) 
 u3 (
     .clk(clk),
@@ -155,7 +153,6 @@ wire u5startu6;
     
 bram_pad_interlayer #(
     .channels(10),
-    .data_depth(324),
     .zero_padding(2),
     .layer_size(14)) 
 u5 (
@@ -210,7 +207,6 @@ wire u7startu8;
     
 bram_pad_interlayer #(
     .channels(10),
-    .data_depth(196),
     .zero_padding(0),
     .layer_size(14)) 
 u7 (
@@ -261,7 +257,6 @@ u8 (
     
 bram_pad_interlayer #(
     .channels(10),
-    .data_depth(49),
     .zero_padding(0),
     .layer_size(7)) 
 u9 (
