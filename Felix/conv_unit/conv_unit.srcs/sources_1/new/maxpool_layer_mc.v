@@ -22,7 +22,6 @@
 
 module maxpool_layer_mc
 #(
-    parameter integer bram_depth = 784,
     parameter integer pool_size = 2,
     parameter integer input_size = 4,
     parameter integer stride = 2,
@@ -39,8 +38,8 @@ module maxpool_layer_mc
     output reg done = 1'b0,
     output reg ready = 1'b0,
     output reg load_done = 1'b0,
-    output reg [clogb2(round_to_next_two(bram_depth))-1 : 0] addr = 0,
-    output reg [clogb2(round_to_next_two(bram_depth))-1 : 0] out_addr = 0,
+    output reg [clogb2(round_to_next_two(input_size**2))-1 : 0] addr = 0,
+    output reg [clogb2(round_to_next_two(max_res_size**2))-1 : 0] out_addr = 0,
     output reg [channels-1:0] wren = 0,
     output reg [clogb2(round_to_next_two(max_res_size))-1 : 0] row = 0
     );

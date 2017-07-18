@@ -51,7 +51,8 @@ wire u1startu2;
 bram_pad_interlayer #(
     .init_file("imagedata_7.txt"),
     .channels(1),
-    .data_depth(900)) 
+    .data_depth(900),
+    .layer_size(28)) 
 u1 (
     .clk(clk),
     .done(start),
@@ -75,12 +76,12 @@ wire [9:0] u2wrenu3;
 conv_layer_mc #(
     .weight_file("convtest_w0.txt"),
     .bias_file("convtest_b0.txt"),
-    .bram_depth(900),
     .stride(1),
     .filter_size(3),
     .filter_nb(10),
     .channels(1),
-    .dsp_alloc(1)
+    .dsp_alloc(1),
+    .input_size(30)
 )
 u2 (
     .clk(clk),
@@ -104,7 +105,8 @@ wire u3startu4;
     
 bram_pad_interlayer #(
     .channels(10),
-    .data_depth(784)) 
+    .data_depth(784),
+    .layer_size(28)) 
 u3 (
     .clk(clk),
     .done(u2doneu3),
@@ -122,11 +124,10 @@ wire u6acku4;
 wire u4doneu5;
 wire [8*10-1:0] u4datau5;
 wire [clogb2(round_to_next_two(196))-1:0] u4addru5;
-wire [clogb2(round_to_next_two(28))-1:0] u4rowu5;
+wire [clogb2(round_to_next_two(14))-1:0] u4rowu5;
 wire [9:0] u4wrenu5;
 
 maxpool_layer_mc #(
-    .bram_depth(784),
     .pool_size(2),
     .input_size(28),
     .stride(2),
@@ -155,7 +156,8 @@ wire u5startu6;
 bram_pad_interlayer #(
     .channels(10),
     .data_depth(324),
-    .zero_padding(2)) 
+    .zero_padding(2),
+    .layer_size(14)) 
 u5 (
     .clk(clk),
     .done(u4doneu5),
@@ -179,12 +181,12 @@ wire [9:0] u6wrenu7;
 conv_layer_mc #(
     .weight_file("convtest_w1.txt"),
     .bias_file("convtest_b1.txt"),
-    .bram_depth(324),
     .stride(1),
     .filter_size(5),
     .filter_nb(10),
     .channels(10),
-    .dsp_alloc(10)
+    .dsp_alloc(10),
+    .input_size(18)
 )
 u6 (
     .clk(clk),
@@ -209,7 +211,8 @@ wire u7startu8;
 bram_pad_interlayer #(
     .channels(10),
     .data_depth(196),
-    .zero_padding(0)) 
+    .zero_padding(0),
+    .layer_size(14)) 
 u7 (
     .clk(clk),
     .done(u6doneu7),
@@ -231,7 +234,6 @@ wire [clogb2(round_to_next_two(7))-1:0] u8rowu9;
 wire [9:0] u8wrenu9;
 
 maxpool_layer_mc #(
-    .bram_depth(196),
     .pool_size(2),
     .input_size(14),
     .stride(2),
@@ -259,8 +261,9 @@ u8 (
     
 bram_pad_interlayer #(
     .channels(10),
-    .data_depth(196),
-    .zero_padding(0)) 
+    .data_depth(49),
+    .zero_padding(0),
+    .layer_size(7)) 
 u9 (
     .clk(clk),
     .done(u8doneu9),

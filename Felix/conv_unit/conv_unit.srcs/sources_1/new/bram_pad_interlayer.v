@@ -31,7 +31,7 @@ module bram_pad_interlayer
     )
     (
     input clk, done, ready,
-    input [clogb2(data_depth)-1 : 0] wr_addr,
+    input [clogb2(layer_size**2)-1 : 0] wr_addr,
     input [clogb2(round_to_next_two(data_depth))-1 : 0] rd_addr,
     input [channels*channel_width-1:0] din,
     input [clogb2(round_to_next_two(layer_size))-1 : 0] row,
@@ -49,11 +49,9 @@ module bram_pad_interlayer
     integer i;
     
     initial begin
+        for (i=0; i<data_depth; i=i+1) bram[i]=0;
         if (init_file != "") begin
             $readmemh(init_file, bram);
-        end
-        else begin
-            for (i=0; i<data_depth; i=i+1) bram[i]=0;
         end
     end
     

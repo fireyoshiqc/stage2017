@@ -24,7 +24,6 @@ module conv_layer_mc
     #(
     parameter weight_file = "",
     parameter bias_file = "",
-    parameter integer bram_depth = 900,
     parameter integer stride = 1,
     parameter integer filter_size = 3,
     parameter integer filter_nb = 10,
@@ -51,8 +50,8 @@ module conv_layer_mc
     output reg ready = 1'b0,
     output reg load_done = 1'b0,
     output reg [filter_nb * (out_int_part+out_frac_part) - 1 : 0] dout,
-    output reg [clogb2(round_to_next_two(bram_depth))-1 : 0] addr = 0,
-    output reg [clogb2(round_to_next_two(bram_depth))-1 : 0] out_addr = 0,
+    output reg [clogb2(round_to_next_two(input_size**2))-1 : 0] addr = 0,
+    output reg [clogb2(round_to_next_two(conv_res_size**2))-1 : 0] out_addr = 0,
     output reg [clogb2(round_to_next_two(conv_res_size))-1 : 0] row = 0,
     output reg [filter_nb - 1 : 0] wren = 0//,
     //output reg [8-1 : 0] out_bias = 0
@@ -241,7 +240,10 @@ module conv_layer_mc
                 out_addr <= 0;
                 wren <= 0;
                 for (filter_itr = 0; filter_itr<filter_size**2; filter_itr = filter_itr+1) begin
-                    conv_filter[filter_itr] <= filters[(conv_k*(filter_size**2) + filter_itr)*channels];
+                    for (i=0; i<channels; i = i + 1) begin
+                        conv_filter[filter_itr][i*(weight_int_part+weight_frac_part) +: (weight_int_part+weight_frac_part)] <= filters[conv_k + filter_itr*channels*filter_nb+(i*filter_nb)];
+                    end
+                    
                 end
                 ready <= 1'b0;
                 done <= 1'b0;
