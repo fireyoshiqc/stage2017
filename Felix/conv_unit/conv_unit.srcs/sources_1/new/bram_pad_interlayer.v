@@ -27,7 +27,7 @@ module bram_pad_interlayer
     parameter channel_width = 8,
     parameter zero_padding = 0,
     parameter layer_size = 2, //WITHOUT PADDING
-    parameter data_depth = (layer_size+zero_padding)**2
+    parameter data_depth = (layer_size+2*zero_padding)**2
     )
     (
     input clk, done, ready,

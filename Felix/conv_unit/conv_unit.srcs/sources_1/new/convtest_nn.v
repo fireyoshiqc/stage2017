@@ -37,12 +37,15 @@
 module convtest_nn(
     input wire clk, start,
     output wire lddone,
-    output wire [8*10-1:0] dout,
-    output wire ostart
+    
+    output wire ostart,
+    output wire [5:0] rgb
     );
     
 `include "functions.vh"
-    
+
+wire [8*10-1:0] dout;
+
 wire u2readyu1;
 wire [clogb2(round_to_next_two(900))-1:0] u2addru1;
 wire [7:0] u1datau2;
@@ -271,5 +274,7 @@ u9 (
     .dout(dout),
     .start(ostart)
 );
+
+assign rgb = u8datau9[5:0];
 
 endmodule
