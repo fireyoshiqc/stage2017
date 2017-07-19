@@ -54,6 +54,7 @@ wire u1startu2;
 bram_pad_interlayer #(
     .init_file("imagedata_7.txt"),
     .channels(1),
+    .zero_padding(1),
     .layer_size(28)) 
 u1 (
     .clk(clk),
@@ -107,6 +108,7 @@ wire u3startu4;
     
 bram_pad_interlayer #(
     .channels(10),
+    .zero_padding(0),
     .layer_size(28)) 
 u3 (
     .clk(clk),
