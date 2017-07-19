@@ -27,11 +27,12 @@ module bram_pad_interlayer
     parameter channel_width = 8,
     parameter zero_padding = 0,
     parameter layer_size = 2, //WITHOUT PADDING
-    parameter data_depth = (layer_size+2*zero_padding)**2
+    parameter data_depth = (layer_size+2*zero_padding)**2,
+    parameter absolute_depth = 0
     )
     (
     input clk, done, ready,
-    input [clogb2(layer_size**2)-1 : 0] wr_addr,
+    input [clogb2(imax(layer_size**2, absolute_depth))-1 : 0] wr_addr,
     input [clogb2(round_to_next_two(data_depth))-1 : 0] rd_addr,
     input [channels*channel_width-1:0] din,
     input [clogb2(round_to_next_two(layer_size))-1 : 0] row,
@@ -40,7 +41,7 @@ module bram_pad_interlayer
     output reg start = 1'b0
     );
 
-    reg [channels*channel_width-1:0] bram [data_depth-1:0];
+    reg [channels*channel_width-1:0] bram [imax(data_depth, absolute_depth)-1:0];
     //wire wren = ~done;
     
     
@@ -49,7 +50,7 @@ module bram_pad_interlayer
     integer i;
     
     initial begin
-        for (i=0; i<data_depth; i=i+1) bram[i]=0;
+        for (i=0; i<imax(data_depth, absolute_depth); i=i+1) bram[i]=0;
         if (init_file != "") begin
             $readmemh(init_file, bram);
         end

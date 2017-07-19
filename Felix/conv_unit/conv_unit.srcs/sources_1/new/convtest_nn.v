@@ -259,20 +259,43 @@ u8 (
 //wire [clogb2(round_to_next_two(49))-1:0] u10addru9;
 //wire [8*10 - 1:0] u9datau10;
 //wire u9startu10;
-    
-bram_pad_interlayer #(
+
+wire ucdoneu9;
+wire [8*70-1:0] ucdatau9;
+wire [clogb2(round_to_next_two(7))-1:0] ucaddru9;
+wire [69:0] ucwrenu9;
+
+conv_to_fc_interlayer #(
     .channels(10),
-    .zero_padding(0),
-    .layer_size(7)) 
-u9 (
+    .layer_size(7),
+    .fc_simd(70)
+   )
+uc (
     .clk(clk),
     .done(u8doneu9),
-    .ready(1'b1),
-    .wr_addr(u8addru9),
-    .rd_addr(0),
+    .in_addr(u8addru9),
     .din(u8datau9),
-    .row(u8rowu9),
-    .wren(u8wrenu9),
+    .wren_in(u8wrenu9),
+    .wren_out(ucwrenu9),
+    .dout(ucdatau9),
+    .out_addr(ucaddru9),
+    .layer_done(ucdoneu9)
+   );
+    
+bram_pad_interlayer #(
+    .channels(70),
+    .zero_padding(0),
+    .layer_size(0),
+    .absolute_depth(7)) 
+u9 (
+    .clk(clk),
+    .done(ucdoneu9),
+    .ready(1'b1),
+    .wr_addr(ucaddru9),
+    .rd_addr(0),
+    .din(ucdatau9),
+    .row(0),
+    .wren(ucwrenu9),
     .dout(dout),
     .start(ostart)
 );
