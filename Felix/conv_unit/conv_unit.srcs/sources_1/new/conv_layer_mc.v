@@ -74,7 +74,7 @@ module conv_layer_mc
     reg [2:0] operation = 0;
     reg [channels * (weight_int_part+weight_frac_part) - 1:0] conv_filter [filter_size**2 - 1 : 0];
     reg signed [clogb2(round_to_next_two(channels*filter_size**2))+imax(bias_int_part+bias_frac_part, input_int_part+weight_int_part+input_frac_part+weight_frac_part):0] sum = 0;
-    reg signed [imax(bias_int_part+bias_frac_part, input_int_part+weight_int_part+input_frac_part+weight_frac_part):0] psums [channels - 1 : 0];
+    reg signed [clogb2(round_to_next_two(filter_size**2))+imax(bias_int_part+bias_frac_part, input_int_part+weight_int_part+input_frac_part+weight_frac_part):0] psums [channels - 1 : 0];
     //integer signed sum;
     //integer signed psums[channels - 1 : 0];
     
@@ -85,6 +85,7 @@ module conv_layer_mc
     reg signed [bias_int_part+bias_frac_part-1:0] s_bias = 0;
     
     reg sumready = 1'b0;
+    reg out_inc = 1'b0;
     
     integer i;
     initial begin
@@ -128,8 +129,13 @@ module conv_layer_mc
                 
                 //out_addr <= conv_i*conv_res_size + conv_j;
                 row <= conv_i;
-                
-                
+                if (out_inc) begin
+                    out_inc <= 1'b0;
+                    out_addr <= out_addr + 1;
+                end
+                else begin
+                    out_addr <= out_addr;
+                end
                 if (load_done) begin
                     operation <= 3'b100;
                 end
@@ -189,7 +195,6 @@ module conv_layer_mc
                             
                             if (conv_i + 1 == conv_res_size && conv_j + 1 == conv_res_size) begin
                                 addr <= 0;
-                                out_addr <= 0;
                                 conv_i <= 0;
                                 conv_j <= 0;
                                 if (conv_k + 1 == filter_nb) begin
@@ -204,13 +209,15 @@ module conv_layer_mc
                             else if (conv_j + 1 == conv_res_size) begin
                                 conv_j <= 0;
                                 conv_i <= conv_i + 1;
-                                out_addr <= out_addr + 1;
+                                //out_addr <= out_addr + 1;
+                                out_inc <= 1'b1;
                                 operation <= 3'b001;
                                 addr <= addr + input_size*(stride-filter_size)+1;
                             end
                             else begin
                                 conv_j <= conv_j + 1;
-                                out_addr <= out_addr + 1;
+                                //out_addr <= out_addr + 1;
+                                out_inc <= 1'b1;
                                 operation <= 3'b001;
                                 addr <= addr + stride - (input_size+1)*(filter_size-1);
                             end
@@ -231,102 +238,12 @@ module conv_layer_mc
                             operation <= 3'b001;
                             wren <= 0;
                         end
-                        //***
-                    
-//                        clocked_j = clocked_j + 1;
-//                        clocked_channel = 0;
-//                        if (clocked_j >= filter_size) begin
-//                            addr <= addr + 1;
-//                            clocked_j = 0;
-//                            clocked_i = clocked_i + 1;
-//                            if (clocked_i >= filter_size) begin
-//                                clocked_i = 0;
-//                                wren[conv_k]= 1'b1;
-//                                //out_bias <= biases[conv_k*8 +: 8];
-//                                s_bias = biases[conv_k];
-//                                sum = (sum << imax(bias_frac_part-(input_frac_part+weight_frac_part), 0)) + (s_bias << imax((input_frac_part+weight_frac_part)-bias_frac_part, 0));
-                                
-//                                // STILL NEEDS SOME WORK TO DETERMINE BIT-LENGTH TO KEEP
-//                                // RELU FUNCTION
-//                                if (sum[imax(input_frac_part+weight_frac_part, bias_frac_part)] == 1'b1) begin
-//                                    sum = 0; //NEGATIVE OR OVERFLOW THAT NEEDS HANDLING
-//                                end
-//                                // CAP THE RELU TO 1
-//                                if (sum[imax(input_frac_part+weight_frac_part, bias_frac_part) +: imax(input_int_part+weight_int_part, bias_int_part)]) begin
-//                                    sum = 8'hff << (imax(input_frac_part+weight_frac_part, bias_frac_part)-(input_frac_part+weight_frac_part));
-//                                end
-//                                dout[conv_k*8 +: 8] = sum[imax(input_frac_part+weight_frac_part, bias_frac_part) - 1 : imax(input_frac_part+weight_frac_part, bias_frac_part)-(input_frac_part+weight_frac_part)];
-//                                // END OF THING THAT NEEDS WORK :)
-                                
-//                                sum = 0;
-//                                conv_j = conv_j + 1;
-//                                if (conv_j >= conv_res_size) begin
-//                                    conv_j = 0;
-//                                    conv_i = conv_i + 1;
-//                                    if (conv_i >= conv_res_size) begin
-//                                        conv_i = 0;
-//                                        conv_k = conv_k + 1;
-//                                        if (conv_k >= filter_nb) begin
-//                                            operation <= 3'b001;
-//                                            load_done <= 1'b1;
-//                                        end
-//                                        else begin
-//                                            operation <= 3'b010;
-//                                        end
-//                                    end
-//                                    else begin
-//                                    conv_k = conv_k;
-//                                    operation = 3'b001;
-//                                    end
-//                                end
-//                                else begin
-//                                    conv_i = conv_i;
-//                                    conv_k = conv_k;
-//                                    operation = 3'b001;
-//                                end
-//                            end
-//                            else begin
-//                                conv_i = conv_i;
-//                                conv_j = conv_j;
-//                                conv_k = conv_k;
-//                                operation = 3'b001;
-//                            end
-//                        end
-//                        else begin
-//                            if (clocked_j == filter_size - 1) begin
-//                                if (clocked_i == filter_size -1) begin
-//                                    if (conv_j == conv_res_size - 1) begin
-//                                        if (conv_i == conv_res_size - 1) begin
-//                                            addr <= 0;
-//                                        end
-//                                        else begin
-//                                            addr <= addr + input_size*(stride-filter_size)+1;
-//                                        end
-//                                    end
-//                                    else begin
-//                                        addr <= addr + stride - (input_size+1)*(filter_size-1);
-//                                    end
-//                                end
-//                                else begin
-//                                    addr <= addr + input_size - filter_size + 1;
-//                                end
-                                
-//                            end
-                            
-//                            else begin
-//                                addr <= addr + 1;
-//                            end
-//                            clocked_i = clocked_i;
-//                            conv_i = conv_i;
-//                            conv_j = conv_j;
-//                            conv_k = conv_k;
-//                            operation <= 3'b001;
-//                        end
-//                    end
-                          
-                end   
+                    end
+                    else begin
+                        wren <= 0;
+                    end
 
-            end
+                end
             end
             3'b010: begin   // LOAD FILTER
                 addr <= 0;
