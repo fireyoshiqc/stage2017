@@ -40,7 +40,8 @@ module conv_to_fc_interlayer#(
     //output reg [out_channels - 1 : 0] wren_out = 0,
     output reg [out_channels*(signbit+channel_width)-1:0] dout = 0,
     //output reg [clogb2(round_to_next_two(channels*layer_size**2/out_channels))-1 : 0] out_addr = 0,
-    output reg start = 1'b0
+    output reg start = 1'b0,
+    output reg ack = 1'b0
     );
 
     `include "functions.vh"
@@ -61,8 +62,15 @@ module conv_to_fc_interlayer#(
     end
 
     always @(posedge clk) begin
-    
-        if (done) begin // MODULE BEFORE IS DONE, LAST WORD HAS BEEN RECEIVED, SO END THE OUTPUT
+        
+        if (layer_done) begin
+                bram_din <= 0;
+                bram_addr <= 0;
+                count <= 0;
+                bram_wren <= 0;
+                layer_done <= 1'b0;
+        end
+        else if (done) begin // MODULE BEFORE IS DONE, LAST WORD HAS BEEN RECEIVED, SO END THE OUTPUT
             bram_din <= bram_din;
             bram_addr <= bram_addr;
             bram_wren <= 1'b1;
@@ -70,13 +78,7 @@ module conv_to_fc_interlayer#(
             layer_done <= 1'b1;
         
         end
-        else if (layer_done) begin
-            bram_din <= 0;
-            bram_addr <= 0;
-            count <= 0;
-            bram_wren <= 0;
-            layer_done <= 1'b0;
-        end
+        
         else begin
             if (bram_wren) begin
                 bram_addr <= bram_addr + 1;
@@ -113,7 +115,8 @@ module conv_to_fc_interlayer#(
         end
         else begin
             dout <= bram[rd_addr];
-            start <= ready & layer_done;
+            start <= ready & done;
+            ack <= ready & done;
         end
     end
     

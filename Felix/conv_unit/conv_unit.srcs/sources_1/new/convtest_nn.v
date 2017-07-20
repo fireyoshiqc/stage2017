@@ -233,6 +233,7 @@ wire [8*10-1:0] u8datau9;
 wire [clogb2(round_to_next_two(49))-1:0] u8addru9;
 wire [clogb2(round_to_next_two(7))-1:0] u8rowu9;
 wire [9:0] u8wrenu9;
+wire u9acku8;
 
 maxpool_layer_mc #(
     .pool_size(2),
@@ -242,7 +243,7 @@ maxpool_layer_mc #(
 )
 u8 (
     .clk(clk),
-    .ack(1'b1),
+    .ack(u9acku8),
     .start(u7startu8),
     .din(u7datau8),
     .dout(u8datau9),
@@ -280,7 +281,8 @@ u9 (
     .din(u8datau9),
     .wren_in(u8wrenu9),
     .dout(dout),
-    .start(ostart)
+    .start(ostart),
+    .ack(u9acku8)
    );
     
 //bram_pad_interlayer #(
