@@ -27,10 +27,11 @@ port(clk, rst,
     --in_a : in std_logic_vector(test_data.inputs'length * 9 - 1 downto 0);
 	--first_done : out std_logic;
 	--first_out_off : out unsigned(5 downto 0);
-    out_a : out std_logic_vector(3 - 1 downto 0)--std_logic_vector(3 * 10  - 1 downto 0)
+    out_a : out std_logic_vector(3 * 10  - 1 downto 0)
     --test_out : out std_logic_vector(8 - 1 downto 0);
     --clk_out : out std_logic;
-    --sel : in unsigned(5 - 1 downto 0)--(8 - 1 downto 0)
+    --sel : in unsigned(5 - 1 downto 0)--(8 - 1 downto 0)	
+	--done_port : out std_logic
 );
 end component;
 
@@ -40,11 +41,12 @@ end component;
 	--signal first_out_off : unsigned(5 downto 0);
 	--signal sel : unsigned(5 - 1 downto 0);
     --signal in_a : std_logic_vector(9 * input_word_size - 1 downto 0);
-    signal out_a : std_logic_vector(3 - 1 downto 0);--std_logic_vector(3 * 10  - 1 downto 0);
+    signal out_a : std_logic_vector(3 * 10  - 1 downto 0);
+	signal done_port : std_logic;
 begin
     
 uut : system port map(
-	clk, rst, start, out_a--, sel--ack, done, test_out, first_done, first_out_off, 
+	clk, rst, start, out_a--, done_port--, sel--ack, done, test_out, first_done, first_out_off, 
 );
 	
 process
@@ -59,7 +61,7 @@ begin
 	wait for p / 2;
 	clk <= '0';
 	start <= '1';
-	for i in 0 to 15 loop	--5600
+	for i in 0 to 100 loop--while done_port = '0' loop--
 		wait for p / 2;
 		clk <= '1';
 		wait for p / 2;

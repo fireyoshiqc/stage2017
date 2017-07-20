@@ -1,7 +1,7 @@
 --Copyright 1986-2015 Xilinx, Inc. All Rights Reserved.
 ----------------------------------------------------------------------------------
 --Tool Version: Vivado v.2015.4 (win64) Build 1412921 Wed Nov 18 09:43:45 MST 2015
---Date        : Wed Jul 05 11:06:50 2017
+--Date        : Wed Jul 12 14:03:58 2017
 --Host        : M4202-04 running 64-bit Service Pack 1  (build 7601)
 --Command     : generate_target ps_clk.bd
 --Design      : ps_clk
@@ -16,10 +16,10 @@ entity ps_clk is
     clk : out STD_LOGIC;
     rst : out STD_LOGIC
   );
-  attribute CORE_GENERATION_INFO : string;
-  attribute CORE_GENERATION_INFO of ps_clk : entity is "ps_clk,IP_Integrator,{x_ipVendor=xilinx.com,x_ipLibrary=BlockDiagram,x_ipName=ps_clk,x_ipVersion=1.00.a,x_ipLanguage=VHDL,numBlks=1,numReposBlks=1,numNonXlnxBlks=0,numHierBlks=0,maxHierDepth=0,synth_mode=Global}";
-  attribute HW_HANDOFF : string;
-  attribute HW_HANDOFF of ps_clk : entity is "ps_clk.hwdef";
+  attribute core_generation_info : string;
+  attribute core_generation_info of ps_clk : entity is "ps_clk,IP_Integrator,{x_ipVendor=xilinx.com,x_ipLibrary=BlockDiagram,x_ipName=ps_clk,x_ipVersion=1.00.a,x_ipLanguage=VHDL,numBlks=1,numReposBlks=1,numNonXlnxBlks=0,numHierBlks=0,maxHierDepth=0,synth_mode=Global}";
+  attribute hw_handoff : string;
+  attribute hw_handoff of ps_clk : entity is "ps_clk.hwdef";
 end ps_clk;
 
 architecture STRUCTURE of ps_clk is

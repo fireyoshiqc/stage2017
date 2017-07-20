@@ -25,9 +25,30 @@ inline size_t global_counter()
 inline size_t bits_needed(size_t maxval) { return ceil(log2(maxval + 0.5)); }
 size_t bits_needed_for_max_int_part_signed(const vector<double>& v);
 
-enum class Sem { clock, reset, main_input, main_output, sig_in_back, sig_in_front, sig_out_back, sig_out_front,
-                 side_input, side_output, sig_in_side, sig_out_side, offset_intake, offset_outtake,
-                 input_spec, output_spec, data_spec, input_width, output_width, data, file, param };
+inline int round_to_next_two(int x)
+{
+    if (x-- < 2)
+        return 2;
+    for (uint8_t off : { 1, 2, 4, 8, 16 })
+        x |= x >> off;
+    return ++x;
+}
+inline int clogb2(const int x)
+{
+    int res = 0;
+    for (size_t i = 0; pow(2, i) < x; ++i)
+        res = i + 1;
+    return res;
+}
+
+enum class Sem { INVALID, clock, reset, main_input, main_output,
+                 sig_in_back, sig_in_front, sig_out_back, sig_out_front,
+                 side_input, side_output, sig_in_side, sig_out_side,
+                 offset_outtake, offset_intake, side_offset_outtake, front_offset_intake, back_offset_outtake, front_offset_outtake, back_offset_intake,
+                 special_input_conv_row, special_input_conv_wren, special_output_conv_row, special_output_conv_wren,
+                 input_spec, output_spec, data_spec, input_width, output_width,
+                 input_spec_int, input_spec_frac, output_spec_int, output_spec_frac,
+                 data, file, param };
 
 struct polyvalue
 {
@@ -58,6 +79,7 @@ struct data_type
             throw runtime_error("data_type.with_range: Trying to give range (" + to_string(high) + ", " + to_string(low) + ") to " + name + ", which doesn't have a range");
         data_type ret(name, ranged, val_format);
         tie(ret.range_high, ret.range_low) = make_tuple(high, low);
+        ret.range_specified = true;
         return move(ret);
     }
     void set_range(int high, int low)
@@ -65,15 +87,18 @@ struct data_type
         if (!ranged)
             throw runtime_error("data_type.set_range: Trying to give range (" + to_string(high) + ", " + to_string(low) + ") to " + name + ", which doesn't have a range");
         tie(range_high, range_low) = make_tuple(high, low);
+        range_specified = true;
     }
     pair<int, int> get_range() { return make_pair(range_high, range_low); }
     string (*val_format)(const polyvalue&);
     string name;
     int range_high, range_low;
     bool ranged;
+    bool range_specified = false;
 };
 extern data_type std_logic_type;
 extern data_type integer_type;
+extern data_type boolean_type;
 extern data_type string_type;
 extern data_type fixed_spec_type;
 extern data_type reals_type;
@@ -84,7 +109,7 @@ extern data_type integers_type;
 
 struct datum
 {
-    datum(string name) : name(move(name)) {}
+    datum(string name) : name(move(name)), sem(Sem::INVALID) {}
     datum(string name, data_type type, Sem sem) : name(move(name)), type(move(type)), sem(sem) {}
     datum(string name, data_type type, Sem sem, initializer_list<double> value) : name(move(name)), value(move(value)), type(move(type)), sem(sem) {}
     datum(string name, data_type type, Sem sem, vector<double> value) : name(move(name)), value(move(value)), type(move(type)), sem(sem) {}
@@ -95,15 +120,20 @@ struct datum
     string port_inst() { return name + " => " + plugged_signal_name; }
     string signal() { return sem != Sem::clock && sem != Sem::reset ? "signal " + plugged_signal_name + " : " + type.full_name() + ";" : ""; }
     string formatted_value() { return value.str.empty() ? type.val_format(value) : value.str; }
-    bool is_invalid() { return name == "INVALID"; }
+    bool is_invalid() const { return name == "INVALID"; }
+    operator bool() const { return !is_invalid(); }
+    bool operator!() const { return is_invalid(); }
     datum& in() && { is_in = true; return *this; }
     datum& out() && { is_in = false; return *this; }
+    datum& hide() { hidden = true; return *this; }
+    bool is_hidden() const { return hidden; }
     string name;
     string plugged_signal_name;
     polyvalue value;
     data_type type;
     Sem sem;
     bool is_in;
+    bool hidden = false;
 };
 
 extern datum invalid_datum;
@@ -157,8 +187,12 @@ struct component
         ss << "component " << name << R"( is
 generic(
 )";
-        for (size_t i = 0, sz = generic.size(); i < sz; ++i)
-            ss << "    " << generic[i].generic_decl() << (i < sz - 1 ? ";\n" : "\n");
+        vector<string> generic_decls; generic_decls.reserve(generic.size());
+        for (datum& g : generic)
+            if (!g.is_hidden())
+                generic_decls.push_back(g.generic_decl());
+        for (size_t i = 0, sz = generic_decls.size(); i < sz; ++i)
+            ss << "    " << generic_decls[i] << (i < sz - 1 ? ";\n" : "\n");
         ss << R"();
 port(
 )";
@@ -173,8 +207,12 @@ end component;
     {
         stringstream ss;
         ss << instance_name << " : " << name << " generic map(\n";
-        for (size_t i = 0, sz = generic.size(); i < sz; ++i)
-            ss << "    " << generic[i].generic_inst() << (i < sz - 1 ? ",\n" : "\n");
+        vector<string> generic_insts; generic_insts.reserve(generic.size());
+        for (datum& g : generic)
+            if (!g.is_hidden())
+                generic_insts.push_back(g.generic_inst());
+        for (size_t i = 0, sz = generic_insts.size(); i < sz; ++i)
+            ss << "    " << generic_insts[i] << (i < sz - 1 ? ",\n" : "\n");
         ss << ") port map(\n";
         for (size_t i = 0, sz = port.size(); i < sz; ++i)
             ss << "    " << port[i].port_inst() << (i < sz - 1 ? ",\n" : "\n");

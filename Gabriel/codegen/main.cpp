@@ -233,7 +233,7 @@ void toy_network2()
     assert_valid(network);
     for (double out : gen_feedforward(network)({ 0.270478, 0.808408, 0.463890, 0.291382, 0.800599, 0.203051 }))
         cout << out << ' ';
-    auto interface = feed_interface();//sim_interface({ 0.270478, 0.808408, 0.463890, 0.291382, 0.800599, 0.203051 });
+    auto interface = sim_interface({ 0.270478, 0.808408, 0.463890, 0.291382, 0.800599, 0.203051 });
     ofstream file("C:/Users/gademb/stage2017/Gabriel/nnet/system.vhd", ios::trunc);
     if (!file.is_open())
         throw runtime_error("Can't open system.vhd.");
@@ -248,7 +248,7 @@ void real_network()
     assert_valid(network);
     for (double out : gen_feedforward(network)(read_data(actual_path + "/realnet/translated-mnist-ex/index-217-N-input.nn")))
         cout << out << ' ';
-    auto interface = block_interface();//test_interface(read_data(actual_path + "/realnet/translated-mnist-ex/index-217-N-input.nn"));
+    auto interface = sim_interface(read_data(actual_path + "/realnet/translated-mnist-ex/index-217-N-input.nn"));
     ofstream file("C:/Users/gademb/stage2017/Gabriel/nnet/system.vhd", ios::trunc);
     if (!file.is_open())
         throw runtime_error("Can't open system.vhd.");
@@ -268,11 +268,35 @@ void toy_network_bin()
     file << gen_code(network, interface);
 }
 
+void real_network_bin()
+{
+    auto network = parse(sexpr::read_file(actual_path + "/realnetbin/realnet.nn"), actual_path + "/realnetbin/")[0];
+    assert_valid(network);
+    auto interface = block_interface();
+    ofstream file("C:/Users/gademb/stage2017/Gabriel/nnet/system.vhd", ios::trunc);
+    if (!file.is_open())
+        throw runtime_error("Can't open system.vhd.");
+    file << gen_code(network, interface);
+}
+
+void conv_network()
+{
+    auto network = parse(sexpr::read_file(actual_path + "/convgentest/conv.nn"), actual_path + "/convgentest/")[0];
+    //assert_valid(network);
+    auto interface = block_interface();
+    ofstream file("C:/Users/gademb/stage2017/Gabriel/codegen/convgentest/system.vhd", ios::trunc);
+    if (!file.is_open())
+        throw runtime_error("Can't open system.vhd.");
+    file << gen_code(network, interface);
+}
+
 int main()
 {
     //toy_network2();
     //real_network();
-    toy_network_bin();
+    //toy_network_bin();
+    //real_network_bin();
+    conv_network();
 }
 
 #endif // COMPILED_AS_TOOL

@@ -20,7 +20,6 @@ generic(
     op_arg_spec : fixed_spec;
     output_spec : fixed_spec;
     weight_values : reals;
-    pick_from_ram : boolean;
     n_weights : integer;
     weights_filename : string
 );
@@ -28,12 +27,9 @@ port(
     clk, rst : in std_logic;
     ready, done : out std_logic;
     start, ack : in std_logic;
-    in_a : in std_logic_vector(if_then_else(pick_from_ram,
-                                   simd_width * size(input_spec),
-                                   input_width * size(input_spec)) - 1 downto 0);
+    in_a : in std_logic_vector(input_width * size(input_spec) - 1 downto 0);
     out_a : out std_logic_vector(output_width * size(output_spec) - 1 downto 0);
     out_offset : out unsigned(bits_needed(output_width) - 1 downto 0);
-    simd_offset : out std_logic_vector(bits_needed(input_width / simd_width - 1) - 1 downto 0);
     op_argument : out sfixed(mk(op_arg_spec)'range);
     op_result : in sfixed(mk(output_spec)'range);
     op_send : out std_logic;
@@ -45,10 +41,10 @@ architecture fc_layer of fc_layer is
 
     constant check1 : integer :=
         synth_assert(simd_width > 0, "simd_width (" & integer'image(simd_width) & ") must be positive.");
-	  constant check2 : integer :=
+	constant check2 : integer :=
         synth_assert(input_width >= simd_width, "simd_width (" & integer'image(simd_width) & ") cannot be greater than input_width (" & integer'image(input_width) & ").");
-	  constant check3 : integer :=
-	      synth_assert(input_width mod simd_width = 0, "input_width (" & integer'image(input_width) & ") not a multiple of simd_width (" & integer'image(simd_width) & ").");
+	constant check3 : integer :=
+	    synth_assert(input_width mod simd_width = 0, "input_width (" & integer'image(input_width) & ") not a multiple of simd_width (" & integer'image(simd_width) & ").");
 
 component fc_controller is
 generic(
@@ -64,7 +60,6 @@ port(
     in_offset : out unsigned(bits_needed(input_width) - 1 downto 0);
     w_offset : out unsigned(bits_needed(input_width * output_width / simd_width) - 1 downto 0);
     out_offset : out unsigned(bits_needed(output_width) - 1 downto 0);
-    simd_offset : out unsigned(bits_needed(input_width / simd_width - 1) - 1 downto 0);
     op_receive : in std_logic
 );
 end component;
@@ -77,20 +72,19 @@ generic(
     input_spec : fixed_spec;
     weight_spec : fixed_spec;
     op_arg_spec : fixed_spec;
-    output_spec : fixed_spec;
-    pick_from_ram : boolean
+    output_spec : fixed_spec
 );
 port(
     clk, rst : in std_logic;
     directives : in directives_t;
     in_offset : in unsigned(bits_needed(input_width) - 1 downto 0);
     out_offset : in unsigned(bits_needed(output_width) - 1 downto 0);
-    in_a : in std_logic_vector;
+    in_a : in std_logic_vector(input_width * size(input_spec) - 1 downto 0);
     w_data : in std_logic_vector(simd_width * size(weight_spec) - 1 downto 0);
     out_a : out std_logic_vector(output_width * size(output_spec) - 1 downto 0);
     op_argument : out sfixed(mk(op_arg_spec)'range);
     op_result : in sfixed(mk(output_spec)'range);
-    op_send : out std_logic
+	op_send : out std_logic
 );
 end component;
 
@@ -113,26 +107,23 @@ end component;
     signal in_offset : unsigned(bits_needed(input_width) - 1 downto 0);
     signal w_offset : unsigned(bits_needed(n_weights / simd_width) - 1 downto 0);
     signal out_offset_sig : unsigned(bits_needed(output_width) - 1 downto 0);
-    signal simd_offset_sig : unsigned(bits_needed(input_width / simd_width - 1) - 1 downto 0);
     
     signal directives : directives_t;
     
     signal w_data : std_logic_vector(simd_width * size(weight_spec) - 1 downto 0);
 	
-	  signal out_a_sig : std_logic_vector(output_width * size(output_spec) - 1 downto 0);
+	signal out_a_sig : std_logic_vector(output_width * size(output_spec) - 1 downto 0);
 	
-	  signal w_query : std_logic;
+	signal w_query : std_logic;
 
 begin
 
     ready <= controls(control_ready);
     done <= controls(control_done);
 	
-	  directives <= (controls(control_mul_acc), controls(control_reduce), controls(control_reset_mul_acc));
+	directives <= (controls(control_mul_acc), controls(control_reduce), controls(control_reset_mul_acc));
 	
-	  out_offset <= out_offset_sig;
-    
-    simd_offset <= std_logic_vector(simd_offset_sig) when simd_offset_sig < input_width / simd_width else std_logic_vector(to_unsigned(0, simd_offset_sig'length));
+	out_offset <= out_offset_sig;
 	
 fc_cont : fc_controller generic map(
     input_width => input_width,
@@ -149,7 +140,6 @@ port map (
     in_offset => in_offset,
     w_offset => w_offset,
     out_offset => out_offset_sig,
-    simd_offset => simd_offset_sig,
     op_receive => op_receive
 );
 
@@ -160,8 +150,7 @@ fc_comp : fc_computation generic map(
     input_spec => input_spec,
     weight_spec => weight_spec,
     op_arg_spec => op_arg_spec,
-    output_spec => output_spec,
-    pick_from_ram => pick_from_ram
+    output_spec => output_spec
 )
 port map (
     clk => clk,
@@ -174,7 +163,7 @@ port map (
     out_a => out_a,
     op_argument => op_argument,
     op_result => op_result,
-    op_send => op_send
+	op_send => op_send
 );
 fc_w : fc_weights generic map(
     simd_width => simd_width,

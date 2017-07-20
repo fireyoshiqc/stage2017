@@ -157,7 +157,7 @@ function init_ram(r : reals) return ram_t is
 begin
     for i in ram'range loop
         for j in 0 to ram(i)'length / in_bitwidth - 1 loop
-            ram(i)((j + 1) * in_bitwidth - 1 downto j * in_bitwidth) := std_logic_vector(to_sfixed(r((ram(i)'length / in_bitwidth) * i + j), mk(input_spec)));
+            ram(i)((j + 1) * in_bitwidth - 1 downto j * in_bitwidth) := std_logic_vector(to_sfixed(r(i), mk(input_spec)));
         end loop;
     end loop;
     return ram;
@@ -246,7 +246,6 @@ op_result_s10 <= resize(output_s21, mk(fixed_spec(fixed_spec'(int => 2, frac => 
 process(clk)
 begin
     if rising_edge(clk) then
-		--report integer'image(to_integer(unsigned(simd_offset_s8))) severity error;
         in_a_s5 <= ram(to_integer(unsigned(simd_offset_s8)));
     end if;
 end process;

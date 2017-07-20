@@ -14,8 +14,8 @@ pair<int, int> parse_fixed_pair(const sexpr_field& s, const string& pos_info)
     for (auto&& val : { make_tuple(&res.first, 1, "First"), make_tuple(&res.second, 2, "Second") }){
         try {
             *get<0>(val) = stoi(s[get<1>(val)].string());
-            if (*get<0>(val) <= 0)
-                throw runtime_error("parse_fixed_pair: At " + pos_info + ": " + string(get<2>(val)) + " value should be positive.");
+            //if (*get<0>(val) <= 0)
+            //    throw runtime_error("parse_fixed_pair: At " + pos_info + ": " + string(get<2>(val)) + " value should be positive.");
         } catch (exception&){
             throw runtime_error("parse_fixed_pair: At " + pos_info + ": " + string(get<2>(val)) + " value has invalid format.");
         }
@@ -84,6 +84,37 @@ vector<double> parse_data(const sexpr_field& s, const string& pos_info)
         res.push_back(parse_double(s[i], pos_info + ", field " + to_string(i)));
     return move(res);
 }
+string parse_string(const sexpr_field& s, const string& pos_info)
+{
+    if (s.is_tree())
+        throw runtime_error("parse_string: At " + pos_info + ": Expecting a value.");
+    return s.string();
+}
+
+//bool parse_match_add_maybe(unordered_map<string, sexpr_field*>& m, const sexpr_field& f, const string& type, const string& pos_info)
+//{
+//    if (type.empty() || type[0] != '%')
+//        return f.is_leaf() && type == f.string();
+//    auto name_pos = type.find('$');
+//    name_pos = name_pos == string::npos ? type.size() : name_pos;
+//    string t = type.substr(1, name_pos - 1), name = type.substr(name_pos + 1);
+//    if (t == "i")
+//        return match_by_t(parse_integer);
+//}
+//pair<unordered_map<string, sexpr_field*>, bool> parse_form(const sexpr_field& s, const string& pattern, const string& pos_info)
+//{
+//    unordered_map<string, sexpr_field*> res;
+//    sexpr pat = sexpr::read(pattern);
+//    if (pat.size() != 1)
+//        return make_pair(res, false);
+//    if (pat[0].is_leaf()){
+//        if (!s.is_leaf())
+//            return make_pair(res, false);
+//
+//    }
+//        return s.is_leaf() ? make_pair(parse_match_add_maybe(res, s, pat[0].string()), true) : make_pair(res, false);
+//
+//}
 
 size_t substitute_macro(sexpr_field& target, sexpr& target_parent, size_t target_index, const string& label, const sexpr_field& body)
 {
@@ -130,11 +161,20 @@ vector<system_specification> parse(sexpr s, const string& src_path)
         if (s[i][0].string() == "network"){
             if (s[i].size() == 1 || s[i][1].is_leaf() || s[i][1].empty() || s[i][1][0].is_tree() || s[i][1][0].string() != "input")
                 throw runtime_error("parse: Missing input specification at beginning of top[" + to_string(i) + "] network.");
-            if (s[i][1].size() != 3)
-                throw runtime_error("parse: Input specification at beginning of top[" + to_string(i) + "] network needs 2 arguments (not " + to_string(s[0][1].size() - 1) + ").");
+            if (s[i][1].size() != 2 && s[i][1].size() != 3 && s[i][1].size() != 5)
+                throw runtime_error("parse: Input specification at beginning of top[" + to_string(i) + "] network needs 1, 2 or 4 arguments (not " + to_string(s[i][1].size() - 1) + ").");
             res.emplace_back();
-            res.back().input_width = parse_positive_integer(s[i][1][1], "first argument of input of top[" + to_string(i) + "] network");
-            res.back().input_spec = parse_fixed_pair(s[i][1][2], "second argument of input of top[" + to_string(i) + "] network");
+            if (s[i][1].size() == 5){
+                res.back().input_width = parse_positive_integer(s[i][1][1], "first argument of input of top[" + to_string(i) + "] network");
+                res.back().input_channels = parse_positive_integer(s[i][1][3], "third argument of input of top[" + to_string(i) + "] network");
+                res.back().input_spec = parse_fixed_pair(s[i][1][4], "fourth argument of input of top[" + to_string(i) + "] network");
+            } else {
+                res.back().input_width = parse_positive_integer(s[i][1][1], "first argument of input of top[" + to_string(i) + "] network");
+                if (s[i][1].size() == 3)
+                    res.back().input_spec = parse_fixed_pair(s[i][1][2], "second argument of input of top[" + to_string(i) + "] network");
+                else
+                    res.back().input_spec = make_pair(1, 8);
+            }
             for (size_t j = 2; j < s[i].size(); ++j){
                 if (s[i][j].is_leaf() || s[i][j].empty() || s[i][j][0].is_tree())
                     throw runtime_error("parse: For top[" + to_string(i) + "] network: Argument " + to_string(j - 1) + " is not a layer.");

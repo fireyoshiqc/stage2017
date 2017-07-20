@@ -8,10 +8,14 @@
 #include <iomanip>
 #include <sstream>
 #include <type_traits>
+#include <cmath>
 
 namespace util
 {
 using namespace std;
+
+constexpr int gcd(int a, int b) { return b == 0 ? a : gcd(b, a % b); }
+constexpr int lcm(int a, int b) { return a == 0 && b == 0 ? 0 : abs(a * b) / gcd(a, b); }
 
 struct sexpr;
 struct sexpr_field;

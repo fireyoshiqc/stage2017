@@ -50,17 +50,21 @@ public:
 };
 
 
-system_str_parts process(system& sys, size_t input_width, pair<int, int> input_spec)
+system_str_parts process(system& sys, size_t input_width, pair<int, int> input_spec, size_t input_channels)
 {
     sys.push_front(unique_ptr<component>(new dummy_layer(vector<datum>{
-        datum("output_width", integer_type,    Sem::output_width, { double(input_width) }),
-        datum("output_spec",  fixed_spec_type, Sem::output_spec,  { double(input_spec.first), double(input_spec.second) }),
+        datum("output_width",     integer_type,    Sem::output_width,     { double(input_width) }),
+        datum("output_spec",      fixed_spec_type, Sem::output_spec,      { double(input_spec.first), double(input_spec.second) }),
+        datum("output_spec_int",  integer_type,    Sem::output_spec_int,  { double(input_spec.first) }),
+        datum("output_spec_frac", integer_type,    Sem::output_spec_frac, { double(input_spec.second) }),
+        datum("output_size",      integer_type,    Sem::output_width,     { double(input_width) }),
+        datum("filter_nb",        integer_type,    Sem::param,            { double(input_channels) }),
     }, vector<datum>{
         datum("output", sfixed_type.with_range(input_width * (input_spec.first + input_spec.second), 0), Sem::main_output),
     })));
     sys.propagate();
     sys.pop_front();
-    sys.propagate();
+    //sys.propagate();
     system_str_parts res;
     res << sys;
     return move(res);
@@ -107,7 +111,7 @@ string gen_code(const system_specification& ssp, system_interface& interf)
     system built;
     for (const layer_specification& layer : ssp.parts)
         built.push_back(component_from_specification(layer));
-    return generate_code_from(built, process(built, ssp.input_width, ssp.input_spec), interf);
+    return generate_code_from(built, process(built, ssp.input_width, ssp.input_spec, ssp.input_channels), interf);
 }
 
 function<vector<double>(vector<double>)> gen_feedforward(const system_specification& ssp)

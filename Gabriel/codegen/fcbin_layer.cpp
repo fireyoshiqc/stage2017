@@ -6,7 +6,7 @@ using namespace std;
 using namespace util;
 
 fcbin_layer_component::fcbin_layer_component(unsigned int output_width, const vector<double>& weights, unsigned int simd_width, const vector<double>& biases)
-    : layer_component(typeid(fcbin_layer_component), "fcbin_layer", "fcbin_layer_u" + to_string(global_counter()),
+    : layer_component(typeid(decay_t<decltype(*this)>), "fcbin_layer", "fcbin_layer_u" + to_string(global_counter()),
     {
         datum("n_inputs",   integer_type,  Sem::input_width),
         datum("n_outputs",  integer_type,  Sem::output_width, { double(output_width) }),

@@ -15,6 +15,8 @@ size_t parse_positive_integer(const sexpr_field& s, const string& pos_info);
 int parse_integer(const sexpr_field& s, const string& pos_info);
 double parse_double(const sexpr_field& s, const string& pos_info);
 vector<double> parse_data(const sexpr_field& s, const string& pos_info);
+string parse_string(const sexpr_field& s, const string& pos_info);
+//vector<sexpr_field*> parse_form(const sexpr_field& s, const string& pattern, const string& pos_info);
 size_t substitute_macro(sexpr_field& target, sexpr& target_parent, size_t target_index, const string& label, const sexpr_field& body);
 bool parse_macro(sexpr& s, size_t i, const string& src_path);
 

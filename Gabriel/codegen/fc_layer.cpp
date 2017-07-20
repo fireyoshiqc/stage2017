@@ -2,13 +2,15 @@
 
 #include "dummy.h"
 
+#include "conv2d_family_layer.h"
+
 namespace gen
 {
 using namespace std;
 using namespace util;
 
 fc_layer_component::fc_layer_component(unsigned int output_width, pair<int, int> output_spec, const vector<double>& weights, pair<int, int> weight_spec, unsigned int simd_width)
-    : layer_component(typeid(fc_layer_component), "fc_layer", "fc_layer_u" + to_string(global_counter()),
+    : layer_component(typeid(decay_t<decltype(*this)>), "fc_layer", "fc_layer_u" + to_string(global_counter()),
     {
         datum("input_width",      integer_type,    Sem::input_width),
         datum("output_width",     integer_type,    Sem::output_width, { double(output_width) }),
@@ -18,22 +20,24 @@ fc_layer_component::fc_layer_component(unsigned int output_width, pair<int, int>
         datum("op_arg_spec",      fixed_spec_type, Sem::param),
         datum("output_spec",      fixed_spec_type, Sem::output_spec,  { double(output_spec.first), double(output_spec.second) }),
         datum("n_weights",        integer_type,    Sem::param,        { double(weights.size()) }),
+        datum("pick_from_ram",    boolean_type,    Sem::param),
         datum("weights_filename", string_type,     Sem::file,         "\"whatever\""),
         datum("weight_values",    reals_type,      Sem::data,         weights),
     },{
-        datum("clk",         std_logic_type,                                                                                   Sem::clock)         .in(),
-        datum("rst",         std_logic_type,                                                                                   Sem::reset)         .in(),
-        datum("ready",       std_logic_type,                                                                                   Sem::sig_out_back)  .out(),
-        datum("done",        std_logic_type,                                                                                   Sem::sig_out_front) .out(),
-        datum("start",       std_logic_type,                                                                                   Sem::sig_in_back)   .in(),
-        datum("ack",         std_logic_type,                                                                                   Sem::sig_in_front)  .in(),
-        datum("in_a",        std_logic_vector_type,                                                                            Sem::main_input)    .in(),
-        datum("out_a",       std_logic_vector_type.with_range(output_width * (output_spec.first + output_spec.second) - 1, 0), Sem::main_output)   .out(),
-        datum("out_offset",  unsigned_type.with_range(bits_needed(output_width) - 1, 0),                                       Sem::offset_outtake).out(),
-        datum("op_argument", sfixed_type,                                                                                      Sem::side_output)   .out(),
-        datum("op_result",   sfixed_type.with_range(output_spec.first - 1, -output_spec.second),                               Sem::side_input)    .in(),
-        datum("op_send",     std_logic_type,                                                                                   Sem::sig_out_side)  .out(),
-        datum("op_receive",  std_logic_type,                                                                                   Sem::sig_in_side)   .in(),
+        datum("clk",         std_logic_type,                                                                                   Sem::clock)              .in(),
+        datum("rst",         std_logic_type,                                                                                   Sem::reset)              .in(),
+        datum("ready",       std_logic_type,                                                                                   Sem::sig_out_back)       .out(),
+        datum("done",        std_logic_type,                                                                                   Sem::sig_out_front)      .out(),
+        datum("start",       std_logic_type,                                                                                   Sem::sig_in_back)        .in(),
+        datum("ack",         std_logic_type,                                                                                   Sem::sig_in_front)       .in(),
+        datum("in_a",        std_logic_vector_type,                                                                            Sem::main_input)         .in(),
+        datum("out_a",       std_logic_vector_type.with_range(output_width * (output_spec.first + output_spec.second) - 1, 0), Sem::main_output)        .out(),
+        datum("out_offset",  unsigned_type.with_range(bits_needed(output_width) - 1, 0),                                       Sem::side_offset_outtake).out(),
+        datum("simd_offset", std_logic_vector_type,                                                                            Sem::back_offset_outtake).out(),
+        datum("op_argument", sfixed_type,                                                                                      Sem::side_output)        .out(),
+        datum("op_result",   sfixed_type.with_range(output_spec.first - 1, -output_spec.second),                               Sem::side_input)         .in(),
+        datum("op_send",     std_logic_type,                                                                                   Sem::sig_out_side)       .out(),
+        datum("op_receive",  std_logic_type,                                                                                   Sem::sig_in_side)        .in(),
     })
 {
     int nbits_int = bits_needed_for_max_int_part_signed(weights);
@@ -42,8 +46,37 @@ fc_layer_component::fc_layer_component(unsigned int output_width, pair<int, int>
              << " bits to represent its (signed) integer part, but only gets " << weight_spec.first << ".\n";
 }
 
+void fc_layer_component::side_propagate(size_t total_input_width)
+{
+    datum& op_arg_spec = find_by(generic, Sem::param, "op_arg_spec");
+    datum& weight_spec = find_by(generic, Sem::data_spec);
+    datum& simd_width = find_by(generic, Sem::param, "simd_width");
+    datum& input_spec = find_by(generic, Sem::input_spec);
+    size_t mul_int_part = input_spec.value[0] + weight_spec.value[0] + 1,
+           n_accumulated = total_input_width / size_t(simd_width.value[0]);
+    double mulacc_int_part = ceil(log2(n_accumulated * pow(2.0, mul_int_part) + 1)),
+           add_tree_contribution = ceil(log2(simd_width.value[0]));
+    op_arg_spec.value = { mulacc_int_part + add_tree_contribution,
+                          input_spec.value[1] + weight_spec.value[1] };
+    datum& side_output = find_by(port, Sem::side_output);
+    side_output.type.set_range(op_arg_spec.value[0] - 1, -op_arg_spec.value[1]);
+    if (subsystem){
+        find_by(subsystem->start()->port, Sem::input_spec).value.num = op_arg_spec.value.num;
+        subsystem->push_front(unique_ptr<component>(new dummy_op(vector<datum>{
+            datum("output_spec", fixed_spec_type, Sem::output_spec, op_arg_spec.value.num),
+        }, vector<datum>{
+            datum("output", sfixed_type.with_range(side_output.type.range_high, side_output.type.range_low), Sem::main_output),
+        })));
+        subsystem->propagate();
+        subsystem->pop_front();
+    }
+}
+
 void fc_layer_component::propagate(component& prev)
 {
+    auto* prev_conv = dynamic_cast<conv2d_family_layer_component*>(&prev);
+    if (prev_conv)
+        return propagate_conv(*prev_conv);
     auto prevspec = [&]{
         datum& prevspec = find_by(prev.generic, Sem::output_spec);
         if (prevspec.is_invalid()){
@@ -56,7 +89,63 @@ void fc_layer_component::propagate(component& prev)
     }();
     size_t prevwidth = find_by(prev.generic, Sem::output_width).value[0];
     find_by(generic, Sem::input_width).value.num = { double(prevwidth) };
-    datum& op_arg_spec = find_by(generic, Sem::param, "op_arg_spec");
+    find_by(port, Sem::main_input).type.set_range(prevwidth * (prevspec[0] + prevspec[1]) - 1, 0);
+    find_by(generic, Sem::param, "pick_from_ram").value.num = { 0.0 };//{ dynamic_cast<conv2d_family_layer_component*>(&prev) != nullptr ? 1.0 : 0.0 };
+    side_propagate(prevwidth);
+    prepended = interlayer_between(static_cast<layer_component*>(&prev), this);
+    /*datum& op_arg_spec = find_by(generic, Sem::param, "op_arg_spec");
+    datum& weight_spec = find_by(generic, Sem::data_spec);
+    datum& simd_width = find_by(generic, Sem::param, "simd_width");
+    size_t mul_int_part = prevspec[0] + weight_spec.value[0] + 1,
+           n_accumulated = prevwidth / size_t(simd_width.value[0]);
+    double mulacc_int_part = ceil(log2(n_accumulated * pow(2.0, mul_int_part) + 1)),
+           add_tree_contribution = ceil(log2(simd_width.value[0]));
+    op_arg_spec.value = { mulacc_int_part + add_tree_contribution,
+                          prevspec[1] + weight_spec.value[1] };
+    datum& side_output = find_by(port, Sem::side_output);
+    side_output.type.set_range(op_arg_spec.value[0] - 1, -op_arg_spec.value[1]);
+    if (subsystem){
+        find_by(subsystem->start()->port, Sem::input_spec).value.num = op_arg_spec.value.num;
+        subsystem->push_front(unique_ptr<component>(new dummy_op(vector<datum>{
+            datum("output_spec", fixed_spec_type, Sem::output_spec, op_arg_spec.value.num),
+        }, vector<datum>{
+            datum("output", sfixed_type.with_range(side_output.type.range_high, side_output.type.range_low), Sem::main_output),
+        })));
+        subsystem->propagate();
+        subsystem->pop_front();
+    }*/
+}
+
+void fc_layer_component::propagate_conv(conv2d_family_layer_component& prev)
+{
+    auto prevspec = [&]{
+        datum& prevspec_int = find_by(prev.generic, Sem::output_spec_int),
+             & prevspec_frac = find_by(prev.generic, Sem::output_spec_frac);
+        if (prevspec_int.is_invalid() || prevspec_frac.is_invalid()){
+            datum& inputspec = find_by(generic, Sem::input_spec);
+            if (inputspec.is_invalid())
+                throw runtime_error("fc_layer_component: Can't deduce (from previous layer) nor find (from self) input fixed-point spec.");
+            return inputspec.value.num;
+        }
+        return find_by(generic, Sem::input_spec).value.num = { prevspec_int.value[0] + 1, prevspec_frac.value[0] };
+    }();
+    auto n_out_filters_of = [&](auto&& comp) -> datum& {
+        if (datum& prev_filter_nb = find_by(comp.generic, Sem::param, "filter_nb"))
+            return prev_filter_nb;
+        else if (datum& prev_channels = find_by(comp.generic, Sem::input_width, "channels"))
+            return prev_channels;
+        else
+            return invalid_datum;
+    };
+    size_t total_input_width = n_out_filters_of(prev) * pow(find_by(prev.generic, Sem::output_width).value[0], 2);
+    find_by(generic, Sem::input_width).value.num = { double(total_input_width) };
+    size_t simd_width = find_by(generic, Sem::param, "simd_width").value[0];
+    find_by(port, Sem::main_input).type.set_range(simd_width * (prevspec[0] + prevspec[1]) - 1, 0);
+    find_by(port, Sem::back_offset_outtake).type.set_range(bits_needed(total_input_width / simd_width - 1) - 1, 0);
+    find_by(generic, Sem::param, "pick_from_ram").value.num = { 1.0 };
+    side_propagate(total_input_width);
+    prepended = interlayer_between(static_cast<layer_component*>(&prev), this);
+    /*datum& op_arg_spec = find_by(generic, Sem::param, "op_arg_spec");
     datum& weight_spec = find_by(generic, Sem::data_spec);
     datum& simd_width = find_by(generic, Sem::param, "simd_width");
     size_t mul_int_part = prevspec[0] + weight_spec.value[0] + 1,
@@ -68,7 +157,7 @@ void fc_layer_component::propagate(component& prev)
     find_by(port, Sem::main_input).type.set_range(prevwidth * (prevspec[0] + prevspec[1]) - 1, 0);
     datum& side_output = find_by(port, Sem::side_output);
     side_output.type.set_range(op_arg_spec.value[0] - 1, -op_arg_spec.value[1]);
-    prepended = interlayer_between(static_cast<layer_component*>(&prev), this);//make_unique<interlayer>(prevwidth, make_pair(int(prevspec[0]), int(prevspec[1])));
+    find_by(generic, Sem::param, "pick_from_ram").value.num = { 0.0 };//{ dynamic_cast<conv2d_family_layer_component*>(&prev) != nullptr ? 1.0 : 0.0 };
     if (subsystem){
         find_by(subsystem->start()->port, Sem::input_spec).value.num = op_arg_spec.value.num;
         subsystem->push_front(unique_ptr<component>(new dummy_op(vector<datum>{
@@ -78,7 +167,7 @@ void fc_layer_component::propagate(component& prev)
         })));
         subsystem->propagate();
         subsystem->pop_front();
-    }
+    }*/
 }
 
 string fc_layer_component::demand_signal(Sem sem)
@@ -100,12 +189,19 @@ string fc_layer_component::demand_signal(Sem sem)
         return find_by(port, Sem::side_input).plugged_signal_name;
     case Sem::side_output:
         return find_by(port, Sem::side_output).plugged_signal_name;
-    case Sem::offset_outtake:
-        return find_by(port, Sem::offset_outtake).plugged_signal_name;
+    case Sem::back_offset_outtake:
+        return find_by(port, Sem::back_offset_outtake).plugged_signal_name;
+    case Sem::side_offset_outtake:
+        return find_by(port, Sem::side_offset_outtake).plugged_signal_name;
     case Sem::sig_in_side:
         return find_by(port, Sem::sig_in_side).plugged_signal_name;
     case Sem::sig_out_side:
         return find_by(port, Sem::sig_out_side).plugged_signal_name;
+    case Sem::back_offset_intake:
+    case Sem::front_offset_intake:
+    case Sem::special_input_conv_row:
+    case Sem::special_input_conv_wren:
+        return prepended->demand_signal(sem);
     default:
         throw runtime_error("fc_layer_component can't produce port signal with semantics code " + to_string(static_cast<int>(sem)) + ".");
     }
@@ -117,6 +213,9 @@ string fc_layer_component::chain_internal()
     ss << find_by(port, Sem::main_input).plugged_signal_name << " <= " << prepended->demand_signal(Sem::main_output) << ";\n"
        << find_by(port, Sem::sig_in_back).plugged_signal_name << " <= " << prepended->demand_signal(Sem::sig_out_front) << ";\n"
        << prepended->demand_signal(Sem::sig_in_front) << " <= " << find_by(port, Sem::sig_out_back).plugged_signal_name << ";\n";
+    datum& interlayer_ram_offset_port = find_by(prepended->port, Sem::front_offset_intake);
+    if (interlayer_ram_offset_port)
+        ss << interlayer_ram_offset_port.plugged_signal_name << " <= std_logic_vector(resize(unsigned(" << find_by(port, Sem::back_offset_outtake).plugged_signal_name << "), " << interlayer_ram_offset_port.plugged_signal_name << "'length));\n";
     if (subsystem){
         component* start = subsystem->start(), * last = subsystem->last();
         ss << start->demand_signal(Sem::main_input) << " <= " << demand_signal(Sem::side_output) << ";\n"
@@ -125,7 +224,7 @@ string fc_layer_component::chain_internal()
            << subsystem->chain_side();
         for (auto&& cur : subsystem->components)
             if (!find_by(cur->port, Sem::offset_intake).is_invalid())
-                ss << cur->demand_signal(Sem::offset_intake) << " <= " << demand_signal(Sem::offset_outtake) << ";\n";
+                ss << cur->demand_signal(Sem::offset_intake) << " <= " << demand_signal(Sem::side_offset_outtake) << ";\n";
         ss << demand_signal(Sem::side_input) << " <= resize(" << last->demand_signal(Sem::main_output) << ", mk(" << find_by(generic, Sem::output_spec).formatted_value() << "));\n";
     } else {
         ss << demand_signal(Sem::side_input) << " <= resize(" << demand_signal(Sem::side_output) << ", mk(" << find_by(generic, Sem::output_spec).formatted_value() << "));\n";

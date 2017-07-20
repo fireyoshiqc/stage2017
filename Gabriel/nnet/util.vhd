@@ -15,6 +15,8 @@ function bits_needed(n : integer) return integer;
 type reals is array(natural range <>) of real;
 type integers is array(natural range <>) of integer;
 
+function if_then_else(cond : boolean; then_clause : integer; else_clause : integer) return integer;
+
 function get(buf : std_logic_vector; index : integer; example : sfixed) return sfixed;
 procedure set(signal buf : out std_logic_vector; index : integer; value : sfixed);
 procedure set_var(variable buf : out std_logic_vector; index : integer; value : sfixed);
@@ -61,6 +63,15 @@ function bits_needed(n : integer) return integer is
 begin
     return integer(floor(log2(real(n)))) + 1;
 end bits_needed;
+
+function if_then_else(cond : boolean; then_clause : integer; else_clause : integer) return integer is
+begin
+    if cond then
+        return then_clause;
+    else
+        return else_clause;
+    end if;
+end if_then_else;
 
 function get(buf : std_logic_vector; index : integer; example : sfixed) return sfixed is
 begin

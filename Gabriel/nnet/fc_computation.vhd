@@ -19,14 +19,17 @@ generic(
     input_spec : fixed_spec;
     weight_spec : fixed_spec;
     op_arg_spec : fixed_spec;
-    output_spec : fixed_spec
+    output_spec : fixed_spec;
+    pick_from_ram : boolean
 );
 port(
     clk, rst : in std_logic;
     directives : in directives_t;
     in_offset : in unsigned(bits_needed(input_width) - 1 downto 0);
     out_offset : in unsigned(bits_needed(output_width) - 1 downto 0);
-    in_a : in std_logic_vector(input_width * size(input_spec) - 1 downto 0);
+    in_a : in std_logic_vector(if_then_else(pick_from_ram,
+                                   simd_width * size(input_spec),
+                                   input_width * size(input_spec)) - 1 downto 0);
     w_data : in std_logic_vector(simd_width * size(weight_spec) - 1 downto 0);
     out_a : out std_logic_vector(output_width * size(output_spec) - 1 downto 0);
     op_argument : out sfixed(mk(op_arg_spec)'range);
@@ -147,13 +150,13 @@ begin
         case directives is
         when directives_from(directive_mul_acc) =>
             for i in simd_mulacc_cells'range loop
-                simd_mulacc_cells(i) <= resize(simd_mulacc_cells(i) + get(w_data, i, mk(weight_spec)) * get(in_a, to_integer(in_offset) + i, mk(input_spec)), simd_mulacc_cells(i));		
-            end loop;
+                simd_mulacc_cells(i) <= resize(simd_mulacc_cells(i) + get(w_data, i, mk(weight_spec)) * get(in_a, if_then_else(pick_from_ram, 0, to_integer(in_offset)) + i, mk(input_spec)), simd_mulacc_cells(i));
+			end loop;
         when directives_from(directive_reduce) =>
-			op_argument_reg <= reduce2(prepare2(simd_mulacc_cells), simd_mulacc_cells'length, specof(simd_mulacc_cells(0)));--resize(reduce(prepare2(simd_mulacc_cells), simd_mulacc_cells'length, specof(simd_mulacc_cells(0))), mk(op_arg_spec));--resize(reduceX(simd_mulacc_cells, 0), mk(op_arg_spec));
-			op_send <= '1';
+            op_argument_reg <= reduce2(prepare2(simd_mulacc_cells), simd_mulacc_cells'length, specof(simd_mulacc_cells(0)));--resize(reduce(prepare2(simd_mulacc_cells), simd_mulacc_cells'length, specof(simd_mulacc_cells(0))), mk(op_arg_spec));--resize(reduceX(simd_mulacc_cells, 0), mk(op_arg_spec));
+            op_send <= '1';
         when directives_from(directive_reset_mul_acc) =>
-			set(out_a_reg, to_integer(out_offset), op_result);
+            set(out_a_reg, to_integer(out_offset), op_result);
             for i in simd_mulacc_cells'range loop
                 simd_mulacc_cells(i) <= (others => '0');
             end loop;

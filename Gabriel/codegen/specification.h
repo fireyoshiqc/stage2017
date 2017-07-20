@@ -126,6 +126,7 @@ struct system_specification
     vector<layer_specification> parts;
     size_t input_width;
     pair<int, int> input_spec;
+    size_t input_channels = 1;
 };
 
 inline system_specification input(size_t input_width, pair<int, int> input_spec)

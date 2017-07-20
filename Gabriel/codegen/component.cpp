@@ -18,6 +18,9 @@ data_type std_logic_type("std_logic", false);
 data_type integer_type("integer", false, +[](const polyvalue& v){
     return to_string(int(v[0]));
 });
+data_type boolean_type("boolean", false, +[](const polyvalue& v){
+    return v[0] != 0.0 ? "true"s : "false"s;
+});
 data_type string_type("string", false, +[](const polyvalue& v){
     return v.str;
 });
@@ -27,7 +30,11 @@ data_type fixed_spec_type("fixed_spec", false, +[](const polyvalue& v){
 data_type reals_type("reals", false, +[](const polyvalue& v){
     stringstream ss;
     ss << "reals(reals'( ";
-    for (size_t i = 0, sz = v.num.size(); i < sz; ++i)
+    if (v.num.size() == 0)
+        ss << "1 to 0 => 0.0";
+    else if (v.num.size() == 1)
+        ss << "0 to 0 => " << v.num[0];
+    else for (size_t i = 0, sz = v.num.size(); i < sz; ++i)
         ss << fixed << setprecision(7) << v[i] << (i < sz - 1 ? ", " : "");
     ss << "))";
     return ss.str();
