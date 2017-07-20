@@ -72,30 +72,48 @@ After the input clause, any number of layer clauses can be added (in order) insi
 
 ### Currently available layers
 
-- Fully-connected layer, with the form `(fc output-clause weights-clause simd-clause neuron-clause)`
-  - `output-clause` has the form `(output n-outputs fixed-spec)` where `n-outputs` is the number of neurons and `fixed-spec`
-    is the fixed-point shape of each output value.
-  - `weights-clause` has the form `(output data [fixed-spec | bits-spec])` where `data` is an s-expr starting with
-    the word `data` followed with arbitrarily many real values. Another argument, which is either a `fixed-spec` (the fixed-point shape
-    of each weight value) or a `bits-spec` (with form `(bits n-bits)`), meaning that a `fixed-spec` is automatically calculated
-    such that `int-part + frac-part = n-bits` and `int-part` is large enough to accomodate the weight with the largest
-    absolute value), can optionally be added. If it is omitted, then an argument of `(bits 8)` is implicitly assumed.
-  - `simd-clause` has the form `(simd simd-window-width)` where `simd-window-width` is the number of inputs processed in parallel
-    (`n-outputs` of the previous layer - or `n-inputs` before the first layer - should be a multiple of this layer's `simd-window-width`).
-  - `neuron-clause` is a pipeline of operations to perform on each value before they are sent. It has the form `(neuron ops ...)`,
-    where `ops ...` is a list of the operations detailed in the following "Currently available operations" section.
+#### Fully-connected layers
+Fully-connected layers are available for implementation, with the form `(fc output-clause weights-clause simd-clause neuron-clause)`.
+- `output-clause` has the form `(output n-outputs fixed-spec)` where `n-outputs` is the number of neurons and `fixed-spec`
+  is the fixed-point shape of each output value.
+- `weights-clause` has the form `(output data [fixed-spec | bits-spec])` where `data` is an s-expr starting with
+  the word `data` followed with arbitrarily many real values. Another argument, which is either a `fixed-spec` (the fixed-point shape
+  of each weight value) or a `bits-spec` (with form `(bits n-bits)`), meaning that a `fixed-spec` is automatically calculated
+  such that `int-part + frac-part = n-bits` and `int-part` is large enough to accomodate the weight with the largest
+  absolute value), can optionally be added. If it is omitted, then an argument of `(bits 8)` is implicitly assumed.
+- `simd-clause` has the form `(simd simd-window-width)` where `simd-window-width` is the number of inputs processed in parallel
+  (`n-outputs` of the previous layer - or `n-inputs` before the first layer - should be a multiple of this layer's `simd-window-width`).
+- `neuron-clause` is a pipeline of operations to perform on each value before they are sent. It has the form `(neuron ops ...)`,
+  where `ops ...` is a list of the operations detailed in the following "Currently available operations" section.
+
+#### 2D Convolution layers
+2D Convolution layers are available for implementation, with the form `(conv2d output-clause weights-clause simd-clause padding-clause stride-clause kernel-clause neuron-clause)`.
+- `output-clause` has the form `(output n-outputs fixed-spec)` where `n-outputs` is the number of different kernels to use in the convolution, and `fixed-spec`
+  is the fixed-point shape of each output value (it is advised to use the `(fixed 0 8)` specification for now). The number of outputs corresponds to the number of feature maps that are produced by the convolution layer.
+- `weights-clause` has the form `(output data [fixed-spec | bits-spec])` where `data` is an s-expr starting with
+  the word `data` followed with arbitrarily many real values. Another argument, which is either a `fixed-spec` (the fixed-point shape
+  of each kernel weight value) or a `bits-spec` (with form `(bits n-bits)`), meaning that a `fixed-spec` is automatically calculated
+  such that `int-part + frac-part = n-bits` and `int-part` is large enough to accomodate the weight with the largest
+  absolute value), can optionally be added. If it is omitted, then an argument of `(bits 8)` is implicitly assumed.
+- `simd-clause` has the form `(simd simd-window-width)` where `simd-window-width` is the number of input channels processed in parallel in each convolution
+  (`n-outputs` of the previous layer - or `n-inputs` before the first layer - should be a multiple of this layer's `simd-window-width`). Note that for now, single-channel datasets such as MNIST **must** have a `(simd 1)` clause on the input layer if it is a convolution layer.
+- `padding-clause` has the form `(padding padding-format)` where `padding-format` is either `valid` or `same`. A `valid` padding means that the input of this layer is assumed to be of the correct format for the desired output (since the "shape" of the feature maps does not depend on the `output-clause`). A `same` padding means that the input will be padded with zeros around its edges (in 2 dimensions), in order for the convolution layer to produce an output of the same size as the un-padded input. For example, if we have an input of size 28x28 and want an output of 28x28 (stride 1, kernel 3x3, number of feature maps is independent), the input could be padded to 30x30 in order to allow this. Generally, 2D convolutional layers use `same` padding to ensure consistent behavior in the pooling layers.
+- `stride-clause` has the form `(stride stride-amount)` where `stride-amount` is the size of the "jump" that the kernel performs when it passes over the input data. A stride value of 1 is generally used for most convolution layers.
+- `kernel-clause` has the form `(kernel kernel-size)` where `kernel-size` is the size of a side of the kernel (only square kernels are supported). For example, a 3x3 kernel would be declared `(kernel 3)`.
+- `neuron-clause` is a pipeline of operations to perform on each value before they are sent. It has the form `(neuron ops ...)`, where `ops ...` is a list of the operations detailed in the following "Currently available operations" section.
+
+#### Max Pooling Layers
+Max Pooling layers are available for implementation, with the form `(pool type-clause padding-clause stride-clause)`.
+- `type-clause` has the form `(type-spec args ...)` where `type-spec` is the type of pooling to be performed in the layer. Currently, the only supported type is `max`. `args ...` in this case is a single integer value that specifies the size of the pools used. For example, `(max 2)` declares a pooling of type "max" with a pool size of 2x2 (features maps will shrink in size by a factor of 2 on each of their sides).
+- `padding-clause` has the form `(padding padding-format)` where `padding-format` is either `valid` or `same`. A `valid` padding means that the input of this layer is assumed to be of the correct format for the desired output (since the "shape" of the feature maps does not depend on the `output-clause`). A `same` padding means that the input will be padded with zeros around its edges (in 2 dimensions), in order for the convolution layer to produce an output of the same size as the un-padded input. Generally, max pooling layers use `valid` padding.
+- `stride-clause` has the form `(stride stride-amount)` where `stride-amount` is the size of the "jump" that the pools use when collecting data. A stride value equal to the pool size (i.e. 2) is generally advised.
 
 ### Currently available operations
 
-- Bias, with the form `(bias data [fixed-spec | bits-spec])` where `data` is the biases (like for the `data` of a `weights-clause`)
-  and the other optional argument behaves like the one for the weights of a fully-connected layer, but with a default of `(bits 12)`.
-  This simply adds the input value with one of the bias values (indexed by the current output offset). The fixed-point shapes of the
-  input and outputs of this operation are determined automatically based on the previous operation.
-- Sigmoid activation function, with the form `(sigmoid fixed-spec step-precision bit-precision)`. `fixed-spec` is the fixed-point shape of the operation's
-  output value. The operation is implemented by sampling a number of positive values and slopes of the sigmoid function below x = 6, and
-  then interpolating between those samples using the real x value. `step-precision` is a number controlling the number of samples (so
-  the distance between each sample is 2^-step_precision) and `bit-precision` is the number of bits used to store the fraction part of
-  each sample.
+- Bias, with the form `(bias data [fixed-spec | bits-spec])` where `data` is the biases (like for the data of a `weights-clause`) and the other optional argument behaves like the one for the weights of a fully-connected layer, but with a default of `(bits 12)`. This simply adds the input value with one of the bias values (indexed by the current output offset). The fixed-point shapes of the input and outputs of this operation are determined automatically based on the previous operation.
+In convolution layers, the bias operation is included in the hardware module for convolution. Not specifying a bias op will simply load the bias adders with zeroes.
+- Sigmoid activation function, with the form (sigmoid fixed-spec step-precision bit-precision). fixed-spec is the fixed-point shape of the operation's output value. The operation is implemented by sampling a number of positive values and slopes of the sigmoid function below x = 6, and then interpolating between those samples using the real x value. step-precision is a number controlling the number of samples (so the distance between each sample is 2^-step_precision) and bit-precision is the number of bits used to store the fraction part of each sample. This function **cannot** be used on a convolution layer.
+- ReLU (Rectified Linear Unit) activation function, with the form `(relu)`. This takes no parameters (for now).
 
 Example of a .nn file:
 ```
