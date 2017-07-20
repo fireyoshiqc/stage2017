@@ -191,4 +191,4 @@ set_property -dict {PACKAGE_PIN P14 IOSTANDARD LVCMOS33} [get_ports {ostart}]
 
 
 
-#set_property PREG 1 [get_cells mul_reg]
+#set_property PREG 1 [get_cells {[*]/p_1_out[*]}]
