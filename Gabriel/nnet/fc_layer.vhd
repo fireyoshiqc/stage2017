@@ -49,6 +49,8 @@ architecture fc_layer of fc_layer is
         synth_assert(input_width >= simd_width, "simd_width (" & integer'image(simd_width) & ") cannot be greater than input_width (" & integer'image(input_width) & ").");
 	  constant check3 : integer :=
 	      synth_assert(input_width mod simd_width = 0, "input_width (" & integer'image(input_width) & ") not a multiple of simd_width (" & integer'image(simd_width) & ").");
+    constant check4 : integer :=
+	      synth_assert(n_weights >= input_width * output_width, "Number of weights given (" & integer'image(n_weights) & ") smaller than number of weights necessary (" & integer'image(input_width * output_width) & ").");
 
 component fc_controller is
 generic(
@@ -104,14 +106,14 @@ generic(
 );
 port(
     query : in std_logic;
-    w_offset : in unsigned(bits_needed(n_weights / simd_width) - 1 downto 0);--(bits_needed(ROM_weights'length) - 1 downto 0);
+    w_offset : in unsigned(bits_needed(input_width * output_width / simd_width) - 1 downto 0);--(bits_needed(ROM_weights'length) - 1 downto 0);
     w_data : out std_logic_vector(simd_width * size(weight_spec) - 1 downto 0)
 );
 end component;
 
     signal controls : controls_t;
     signal in_offset : unsigned(bits_needed(input_width) - 1 downto 0);
-    signal w_offset : unsigned(bits_needed(n_weights / simd_width) - 1 downto 0);
+    signal w_offset : unsigned(bits_needed(input_width * output_width / simd_width) - 1 downto 0);
     signal out_offset_sig : unsigned(bits_needed(output_width) - 1 downto 0);
     signal simd_offset_sig : unsigned(bits_needed(input_width / simd_width - 1) - 1 downto 0);
     
@@ -179,7 +181,7 @@ port map (
 fc_w : fc_weights generic map(
     simd_width => simd_width,
     weight_spec => weight_spec,
-    n_weights => n_weights,
+    n_weights => input_width * output_width,
     weights_filename => weights_filename,
     weight_values => weight_values
 )
