@@ -61,6 +61,8 @@ becomes:
   a b c (d 11 22 33) x)
 ```
 
+There also exists another keyword called `file`. This keyword allows the direct use of pre-constructed files in the hardware implementation of the network, be it weights or biases. This keyword can be used in 2D Convolution layers, in the form `(file filename)`. Please note that the file has to contain pre-formatted fixed-point numbers, separated by newlines, in order for the hardware implementation to function correctly. These files can be produced using the `nntofixed.py` script, present in the Felix/Python folder, and will be `.txt` files (other non-binary formats can also be used, as long as they have the correct structure). The filenames specified must be declared as relative to the project's current directory (subject to change).
+
 ## Network (.nn) Semantics
 
 Other than what was mentioned previously, .nn files allow only s-expressions starting with the word `network` at the top level.
@@ -76,7 +78,7 @@ After the input clause, any number of layer clauses can be added (in order) insi
 Fully-connected layers are available for implementation, with the form `(fc output-clause weights-clause simd-clause neuron-clause)`.
 - `output-clause` has the form `(output n-outputs fixed-spec)` where `n-outputs` is the number of neurons and `fixed-spec`
   is the fixed-point shape of each output value.
-- `weights-clause` has the form `(output data [fixed-spec | bits-spec])` where `data` is an s-expr starting with
+- `weights-clause` has the form `(weights data [fixed-spec | bits-spec])` where `data` is an s-expr starting with
   the word `data` followed with arbitrarily many real values. Another argument, which is either a `fixed-spec` (the fixed-point shape
   of each weight value) or a `bits-spec` (with form `(bits n-bits)`), meaning that a `fixed-spec` is automatically calculated
   such that `int-part + frac-part = n-bits` and `int-part` is large enough to accomodate the weight with the largest
@@ -90,11 +92,8 @@ Fully-connected layers are available for implementation, with the form `(fc outp
 2D Convolution layers are available for implementation, with the form `(conv2d output-clause weights-clause simd-clause padding-clause stride-clause kernel-clause neuron-clause)`.
 - `output-clause` has the form `(output n-outputs fixed-spec)` where `n-outputs` is the number of different kernels to use in the convolution, and `fixed-spec`
   is the fixed-point shape of each output value (it is advised to use the `(fixed 0 8)` specification for now). The number of outputs corresponds to the number of feature maps that are produced by the convolution layer.
-- `weights-clause` has the form `(output data [fixed-spec | bits-spec])` where `data` is an s-expr starting with
-  the word `data` followed with arbitrarily many real values. Another argument, which is either a `fixed-spec` (the fixed-point shape
-  of each kernel weight value) or a `bits-spec` (with form `(bits n-bits)`), meaning that a `fixed-spec` is automatically calculated
-  such that `int-part + frac-part = n-bits` and `int-part` is large enough to accomodate the weight with the largest
-  absolute value), can optionally be added. If it is omitted, then an argument of `(bits 8)` is implicitly assumed.
+- `weights-clause` has the form `(weights file fixed-spec)` where `file` is an s-expr starting with
+  the word `file` followed with a filename containing the pre-made fixed-point values that correspond to the then mentioned `fixed-spec`. The last argument, `fixed-spec`, specifies the format of the fixed-point numbers present in the file. For example, a spec declared as `(fixed 1 8)` would be interpreted as signed 9 bit fixed point numbers (1 bit for the sign as integer part, and 8 bits for the fractional part). Please note that due to the way the convolution layers are implemented in hardware, they **cannot** use the `data` clause to declare weights for the layers.
 - `simd-clause` has the form `(simd simd-window-width)` where `simd-window-width` is the number of input channels processed in parallel in each convolution
   (`n-outputs` of the previous layer - or `n-inputs` before the first layer - should be a multiple of this layer's `simd-window-width`). Note that for now, single-channel datasets such as MNIST **must** have a `(simd 1)` clause on the input layer if it is a convolution layer.
 - `padding-clause` has the form `(padding padding-format)` where `padding-format` is either `valid` or `same`. A `valid` padding means that the input of this layer is assumed to be of the correct format for the desired output (since the "shape" of the feature maps does not depend on the `output-clause`). A `same` padding means that the input will be padded with zeros around its edges (in 2 dimensions), in order for the convolution layer to produce an output of the same size as the un-padded input. For example, if we have an input of size 28x28 and want an output of 28x28 (stride 1, kernel 3x3, number of feature maps is independent), the input could be padded to 30x30 in order to allow this. Generally, 2D convolutional layers use `same` padding to ensure consistent behavior in the pooling layers.
@@ -110,9 +109,9 @@ Max Pooling layers are available for implementation, with the form `(pool type-c
 
 ### Currently available operations
 
-- Bias, with the form `(bias data [fixed-spec | bits-spec])` where `data` is the biases (like for the data of a `weights-clause`) and the other optional argument behaves like the one for the weights of a fully-connected layer, but with a default of `(bits 12)`. This simply adds the input value with one of the bias values (indexed by the current output offset). The fixed-point shapes of the input and outputs of this operation are determined automatically based on the previous operation.
-In convolution layers, the bias operation is included in the hardware module for convolution. Not specifying a bias op will simply load the bias adders with zeroes.
-- Sigmoid activation function, with the form (sigmoid fixed-spec step-precision bit-precision). fixed-spec is the fixed-point shape of the operation's output value. The operation is implemented by sampling a number of positive values and slopes of the sigmoid function below x = 6, and then interpolating between those samples using the real x value. step-precision is a number controlling the number of samples (so the distance between each sample is 2^-step_precision) and bit-precision is the number of bits used to store the fraction part of each sample. This function **cannot** be used on a convolution layer.
+- Fully-connected bias, with the form `(bias data [fixed-spec | bits-spec])` where `data` is the biases (like for the data of a `weights-clause`) and the other optional argument behaves like the one for the weights of a fully-connected layer, but with a default of `(bits 12)`. This simply adds the input value with one of the bias values (indexed by the current output offset). The fixed-point shapes of the input and outputs of this operation are determined automatically based on the previous operation.
+- Convolution bias, with the form `(bias file fixed-spec)`. In convolution layers, the bias operation is included in the hardware module for convolution. Not specifying a bias op will simply load the bias adders with zeroes. Just like with weights, convolution layers can only use the `file` s-expr to declare their biases. The file must contain data that is formatted in the way specified by `fixed-spec`, just like weights. Note that it is advised to use higher precision for biases than weights, since there are generally far less biases in a convolutional network than there are weights.
+- Sigmoid activation function, with the form (sigmoid fixed-spec step-precision bit-precision). fixed-spec is the fixed-point shape of the operation's output value. The operation is implemented by sampling a number of positive values and slopes of the sigmoid function below x = 6, and then interpolating between those samples using the real x value. step-precision is a number controlling the number of samples (so the distance between each sample is 2<sup>-step_precision</sup>) and bit-precision is the number of bits used to store the fraction part of each sample. This function **cannot** be used on a convolution layer.
 - ReLU (Rectified Linear Unit) activation function, with the form `(relu)`. This takes no parameters (for now).
 
 Example of a .nn file:
