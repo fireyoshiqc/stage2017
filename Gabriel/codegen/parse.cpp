@@ -90,6 +90,12 @@ string parse_string(const sexpr_field& s, const string& pos_info)
         throw runtime_error("parse_string: At " + pos_info + ": Expecting a value.");
     return s.string();
 }
+string parse_file(const sexpr_field& s, const string& pos_info)
+{
+    if (s.is_leaf() || s.size() != 2 || s[0].is_tree() || s[0].string() != "file" || s[1].is_tree())
+        throw runtime_error("parse_file: At " + pos_info + ": Wrong format for file expr (expecting \"file\" followed by a string).");
+    return s[1].string();
+}
 
 //bool parse_match_add_maybe(unordered_map<string, sexpr_field*>& m, const sexpr_field& f, const string& type, const string& pos_info)
 //{

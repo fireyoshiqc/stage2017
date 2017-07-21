@@ -5,7 +5,7 @@ namespace gen
 using namespace std;
 using namespace util;
 
-conv2d_layer_component::conv2d_layer_component(size_t n_filters_output, pair<int, int> output_spec, const vector<double>& weights, pair<int, int> weight_spec, size_t simd_width_dsp_alloc, const string& padding_previous, size_t stride, size_t kernel_side, const vector<double>& biases, pair<int, int> bias_spec)
+conv2d_layer_component::conv2d_layer_component(size_t n_filters_output, pair<int, int> output_spec, const string& weight_file, pair<int, int> weight_spec, size_t simd_width_dsp_alloc, const string& padding_previous, size_t stride, size_t kernel_side, const string& bias_file, pair<int, int> bias_spec)
     : conv2d_family_layer_component("conv_layer_mc", "conv_layer_mc_u" + to_string(global_counter()),
     {
         datum("stride",           integer_type, Sem::param,            { double(stride) }),
@@ -14,8 +14,8 @@ conv2d_layer_component::conv2d_layer_component(size_t n_filters_output, pair<int
         datum("input_size",       integer_type, Sem::input_width),     //size of image side (+ 2 (padding))
         datum("channels",         integer_type, Sem::input_width),     //number of input channels?
         datum("dsp_alloc",        integer_type, Sem::param,            { double(simd_width_dsp_alloc) }),
-        datum("weights",          reals_type,   Sem::data,             weights),
-        datum("biases",           reals_type,   Sem::data,             biases),
+        datum("weight_file",      string_type,  Sem::file,             weight_file),
+        datum("bias_file",        string_type,  Sem::file,             bias_file),
         datum("input_int_part",   integer_type, Sem::input_spec_int),
         datum("input_frac_part",  integer_type, Sem::input_spec_frac),
         datum("weight_int_part",  integer_type, Sem::data_spec,        { double(weight_spec.first) }),
@@ -47,13 +47,13 @@ auto conv2d_gen = define_component_generator("conv2d", +[](const unordered_map<s
     unique_ptr<component> ret(new conv2d_layer_component(
         get("n_filters_output"),
         int_pair(get("output_spec_int"), get("output_spec_frac")),
-        get("weights"),
+        get("weight_file"),
         pair<int, int>(get("weight_spec_int"), get("weight_spec_frac")),
         get("simd_width_dsp_alloc"),
         get("padding_previous"),
         get("stride"),
         get("kernel_side"),
-        get("biases"),
+        get("bias_file"),
         pair<int, int>(get("bias_spec_int"), get("bias_spec_frac"))
     ));
     return move(ret);
@@ -84,11 +84,11 @@ auto conv2d_parse = define_layer_spec_parser("conv2d", +[](const sexpr_field& s,
     const sexpr_field& weightsf = *fields["weights"];
     if (weightsf.size() != 3)
         throw runtime_error("layer_spec_parser for conv2d: At " + pos_info + ": Weights field takes 2 arguments, not " + to_string(weightsf.size() - 1) + ".");
-    vector<double> w_data = parse_data(weightsf[1], pos_info + ", first argument of weights clause");
+    string w_file = parse_file(weightsf[1], pos_info + ", first argument of weights clause");
     pair<int, int> wspec = parse_fixed_pair(weightsf[2], pos_info + ", second argument of output clause");
     layer.parameters.emplace("weight_spec_int", wspec.first);
     layer.parameters.emplace("weight_spec_frac", wspec.second);
-    layer.parameters.emplace("weights", w_data);
+    layer.parameters.emplace("weight_file", w_file);
 
     const auto one_arg = [&](auto&& parser, const string& name, const string& param_name){
         const sexpr_field& f = *fields[name];
@@ -105,11 +105,11 @@ auto conv2d_parse = define_layer_spec_parser("conv2d", +[](const sexpr_field& s,
     if (!(neuronf.size() == 3 && neuronf[1].is_tree() && neuronf[1].size() == 3 && neuronf[1][0].is_leaf() && neuronf[1][0].string() == "bias" &&
                                  neuronf[2].is_tree() && neuronf[2].size() == 1 && neuronf[2][0].is_leaf() && neuronf[2][0].string() == "relu"))
         throw runtime_error("layer_spec_parser for conv2d: At " + pos_info + ": Incorrect format for neuron field (expecting form (neuron (bias *data* *fixed*) (relu))).");
-    vector<double> b_data = parse_data(neuronf[1][1], pos_info + ", first argument of bias clause");
+    string b_file = parse_file(neuronf[1][1], pos_info + ", first argument of bias clause");
     pair<int, int> bspec = parse_fixed_pair(neuronf[1][2], pos_info + ", second argument of bias clause");
     layer.parameters.emplace("bias_spec_int", bspec.first);
     layer.parameters.emplace("bias_spec_frac", bspec.second);
-    layer.parameters.emplace("biases", b_data);
+    layer.parameters.emplace("bias_file", b_file);
 
     return move(layer);
 });

@@ -119,7 +119,7 @@ struct datum
     string generic_inst() { return name + " => " + formatted_value(); }
     string port_inst() { return name + " => " + plugged_signal_name; }
     string signal() { return sem != Sem::clock && sem != Sem::reset ? "signal " + plugged_signal_name + " : " + type.full_name() + ";" : ""; }
-    string formatted_value() { return value.str.empty() ? type.val_format(value) : value.str; }
+    string formatted_value() { return type.val_format(value); }//value.str.empty() ? type.val_format(value) : value.str; }
     bool is_invalid() const { return name == "INVALID"; }
     operator bool() const { return !is_invalid(); }
     bool operator!() const { return is_invalid(); }

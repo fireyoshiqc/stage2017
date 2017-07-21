@@ -22,7 +22,7 @@ data_type boolean_type("boolean", false, +[](const polyvalue& v){
     return v[0] != 0.0 ? "true"s : "false"s;
 });
 data_type string_type("string", false, +[](const polyvalue& v){
-    return v.str;
+    return '"' + v.str + '"';
 });
 data_type fixed_spec_type("fixed_spec", false, +[](const polyvalue& v){
     return "fixed_spec(fixed_spec'(int => " + to_string(int(v[0])) + ", frac => " + to_string(int(v[1])) + "))";
@@ -80,6 +80,10 @@ string system::chain_main()
            << components[i]->demand_signal(Sem::sig_in_front) << " <= " << components[i + 1]->demand_signal(Sem::sig_out_back) << ";\n"
            << components[i + 1]->demand_signal(Sem::sig_in_back) << " <= " << components[i]->demand_signal(Sem::sig_out_front) << ";\n"
            << components[i]->chain_internal();
+        if (find_by(components[i]->port, Sem::special_output_conv_row) && find_by(components[i + 1]->prepended->port, Sem::special_input_conv_row))
+            ss << components[i + 1]->demand_signal(Sem::special_input_conv_row) << " <= " << components[i]->demand_signal(Sem::special_output_conv_row) << ";\n";
+        if (find_by(components[i]->port, Sem::special_output_conv_wren) && find_by(components[i + 1]->prepended->port, Sem::special_input_conv_wren))
+            ss << components[i + 1]->demand_signal(Sem::special_input_conv_wren) << " <= " << components[i]->demand_signal(Sem::special_output_conv_wren) << ";\n";
     }
     ss << components[components.size() - 1]->chain_internal();
     return ss.str();

@@ -18,6 +18,7 @@ struct system_interface
     virtual string entity(system& s) = 0;
     virtual string architecture_preface(system& s) = 0;
     virtual string architecture_body(system& s) = 0;
+    virtual void alter(system& s) {};
 };
 
 inline string to_vec_function_def(system& s)

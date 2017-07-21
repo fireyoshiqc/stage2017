@@ -21,7 +21,7 @@ fc_layer_component::fc_layer_component(unsigned int output_width, pair<int, int>
         datum("output_spec",      fixed_spec_type, Sem::output_spec,  { double(output_spec.first), double(output_spec.second) }),
         datum("n_weights",        integer_type,    Sem::param,        { double(weights.size()) }),
         datum("pick_from_ram",    boolean_type,    Sem::param),
-        datum("weights_filename", string_type,     Sem::file,         "\"whatever\""),
+        datum("weights_filename", string_type,     Sem::file,         "whatever"),
         datum("weight_values",    reals_type,      Sem::data,         weights),
     },{
         datum("clk",         std_logic_type,                                                                                   Sem::clock)              .in(),
@@ -137,7 +137,7 @@ void fc_layer_component::propagate_conv(conv2d_family_layer_component& prev)
         else
             return invalid_datum;
     };
-    size_t total_input_width = n_out_filters_of(prev) * pow(find_by(prev.generic, Sem::output_width).value[0], 2);
+    size_t total_input_width = n_out_filters_of(prev).value[0] * pow(find_by(prev.generic, Sem::output_width).value[0], 2);
     find_by(generic, Sem::input_width).value.num = { double(total_input_width) };
     size_t simd_width = find_by(generic, Sem::param, "simd_width").value[0];
     find_by(port, Sem::main_input).type.set_range(simd_width * (prevspec[0] + prevspec[1]) - 1, 0);

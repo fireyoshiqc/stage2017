@@ -15,6 +15,7 @@ using namespace std;
 #include "sim_interface.h"
 #include "test_interface.h"
 #include "feed_interface.h"
+#include "convtest_interface.h"
 
 using namespace gen;
 using namespace util;
@@ -283,8 +284,8 @@ void conv_network()
 {
     auto network = parse(sexpr::read_file(actual_path + "/convgentest/conv.nn"), actual_path + "/convgentest/")[0];
     //assert_valid(network);
-    auto interface = block_interface();
-    ofstream file("C:/Users/gademb/stage2017/Gabriel/codegen/convgentest/system.vhd", ios::trunc);
+    auto interface = convtest_interface("C:/Users/gademb/stage2017/Gabriel/codegen/convgentest/conv-b1.nn");
+    ofstream file("C:/Users/gademb/stage2017/Gabriel/nnet/system.vhd", ios::trunc);
     if (!file.is_open())
         throw runtime_error("Can't open system.vhd.");
     file << gen_code(network, interface);
