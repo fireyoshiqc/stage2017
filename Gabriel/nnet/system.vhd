@@ -193,11 +193,11 @@ signal start_s3 : std_logic;
 signal ack_s4 : std_logic;
 signal load_done_s5 : std_logic;
 signal din_s6 : std_logic_vector(7 downto 0);
-signal dout_s7 : std_logic_vector(255 downto 0);
+signal dout_s7 : std_logic_vector(79 downto 0);
 signal addr_s8 : std_logic_vector(9 downto 0);
 signal out_addr_s9 : std_logic_vector(9 downto 0);
 signal row_s10 : std_logic_vector(4 downto 0);
-signal wren_s11 : std_logic_vector(31 downto 0);
+signal wren_s11 : std_logic_vector(9 downto 0);
 
 
 signal ready_s74 : std_logic;
@@ -216,23 +216,23 @@ signal done_s14 : std_logic;
 signal start_s15 : std_logic;
 signal ack_s16 : std_logic;
 signal load_done_s17 : std_logic;
-signal din_s18 : std_logic_vector(255 downto 0);
-signal dout_s19 : std_logic_vector(255 downto 0);
+signal din_s18 : std_logic_vector(79 downto 0);
+signal dout_s19 : std_logic_vector(79 downto 0);
 signal addr_s20 : std_logic_vector(9 downto 0);
 signal out_addr_s21 : std_logic_vector(7 downto 0);
 signal row_s22 : std_logic_vector(3 downto 0);
-signal wren_s23 : std_logic_vector(31 downto 0);
+signal wren_s23 : std_logic_vector(9 downto 0);
 
 
 signal ready_s84 : std_logic;
 signal done_s85 : std_logic;
 signal start_s86 : std_logic;
-signal din_s87 : std_logic_vector(255 downto 0);
-signal dout_s88 : std_logic_vector(255 downto 0);
+signal din_s87 : std_logic_vector(79 downto 0);
+signal dout_s88 : std_logic_vector(79 downto 0);
 signal wr_addr_s89 : std_logic_vector(9 downto 0);
 signal rd_addr_s90 : std_logic_vector(9 downto 0);
 signal row_s91 : std_logic_vector(4 downto 0);
-signal wren_s92 : std_logic_vector(31 downto 0);
+signal wren_s92 : std_logic_vector(9 downto 0);
 
 
 signal ready_s25 : std_logic;
@@ -240,23 +240,23 @@ signal done_s26 : std_logic;
 signal start_s27 : std_logic;
 signal ack_s28 : std_logic;
 signal load_done_s29 : std_logic;
-signal din_s30 : std_logic_vector(255 downto 0);
-signal dout_s31 : std_logic_vector(511 downto 0);
+signal din_s30 : std_logic_vector(79 downto 0);
+signal dout_s31 : std_logic_vector(79 downto 0);
 signal addr_s32 : std_logic_vector(8 downto 0);
 signal out_addr_s33 : std_logic_vector(7 downto 0);
 signal row_s34 : std_logic_vector(3 downto 0);
-signal wren_s35 : std_logic_vector(63 downto 0);
+signal wren_s35 : std_logic_vector(9 downto 0);
 
 
 signal ready_s94 : std_logic;
 signal done_s95 : std_logic;
 signal start_s96 : std_logic;
-signal din_s97 : std_logic_vector(255 downto 0);
-signal dout_s98 : std_logic_vector(255 downto 0);
+signal din_s97 : std_logic_vector(79 downto 0);
+signal dout_s98 : std_logic_vector(79 downto 0);
 signal wr_addr_s99 : std_logic_vector(7 downto 0);
 signal rd_addr_s100 : std_logic_vector(8 downto 0);
 signal row_s101 : std_logic_vector(3 downto 0);
-signal wren_s102 : std_logic_vector(31 downto 0);
+signal wren_s102 : std_logic_vector(9 downto 0);
 
 
 signal ready_s37 : std_logic;
@@ -264,23 +264,23 @@ signal done_s38 : std_logic;
 signal start_s39 : std_logic;
 signal ack_s40 : std_logic;
 signal load_done_s41 : std_logic;
-signal din_s42 : std_logic_vector(511 downto 0);
-signal dout_s43 : std_logic_vector(511 downto 0);
+signal din_s42 : std_logic_vector(79 downto 0);
+signal dout_s43 : std_logic_vector(79 downto 0);
 signal addr_s44 : std_logic_vector(7 downto 0);
 signal out_addr_s45 : std_logic_vector(5 downto 0);
 signal row_s46 : std_logic_vector(2 downto 0);
-signal wren_s47 : std_logic_vector(63 downto 0);
+signal wren_s47 : std_logic_vector(9 downto 0);
 
 
 signal ready_s104 : std_logic;
 signal done_s105 : std_logic;
 signal start_s106 : std_logic;
-signal din_s107 : std_logic_vector(511 downto 0);
-signal dout_s108 : std_logic_vector(511 downto 0);
+signal din_s107 : std_logic_vector(79 downto 0);
+signal dout_s108 : std_logic_vector(79 downto 0);
 signal wr_addr_s109 : std_logic_vector(7 downto 0);
 signal rd_addr_s110 : std_logic_vector(7 downto 0);
 signal row_s111 : std_logic_vector(3 downto 0);
-signal wren_s112 : std_logic_vector(63 downto 0);
+signal wren_s112 : std_logic_vector(9 downto 0);
 
 
 
@@ -288,11 +288,11 @@ signal ready_s49 : std_logic;
 signal done_s50 : std_logic;
 signal start_s51 : std_logic;
 signal ack_s52 : std_logic;
-signal in_a_s53 : std_logic_vector(575 downto 0);
+signal in_a_s53 : std_logic_vector(89 downto 0);
 signal out_a_s54 : std_logic_vector(99 downto 0);
 signal out_offset_s55 : unsigned(3 downto 0);
 signal simd_offset_s56 : std_logic_vector(5 downto 0);
-signal op_argument_s57 : sfixed(14 downto -15);
+signal op_argument_s57 : sfixed(12 downto -15);
 signal op_result_s58 : sfixed(1 downto -8);
 signal op_send_s59 : std_logic;
 signal op_receive_s60 : std_logic;
@@ -302,20 +302,20 @@ signal ready_s115 : std_logic;
 signal done_s116 : std_logic;
 signal start_s117 : std_logic;
 signal ack_s118 : std_logic;
-signal din_s119 : std_logic_vector(511 downto 0);
-signal dout_s120 : std_logic_vector(575 downto 0);
+signal din_s119 : std_logic_vector(79 downto 0);
+signal dout_s120 : std_logic_vector(89 downto 0);
 signal wr_addr_s121 : std_logic_vector(5 downto 0);
 signal rd_addr_s122 : std_logic_vector(0 downto 0);
-signal wren_in_s123 : std_logic_vector(63 downto 0);
+signal wren_in_s123 : std_logic_vector(9 downto 0);
 
-signal input_s62 : sfixed(14 downto -15);
+signal input_s62 : sfixed(12 downto -15);
 signal offset_s63 : unsigned(3 downto 0);
-signal output_s64 : sfixed(15 downto -15);
+signal output_s64 : sfixed(13 downto -15);
 signal op_send_s65 : std_logic;
 signal op_receive_s66 : std_logic;
 
 
-signal input_s68 : sfixed(15 downto -15);
+signal input_s68 : sfixed(13 downto -15);
 signal output_s69 : sfixed(1 downto -8);
 signal op_send_s70 : std_logic;
 signal op_receive_s71 : std_logic;
@@ -336,10 +336,10 @@ begin
 conv_layer_mc_u0 : conv_layer_mc generic map(
     stride => 1,
     filter_size => 5,
-    filter_nb => 32,
+    filter_nb => 10,
     input_size => 32,
     channels => 1,
-    dsp_alloc => 3,
+    dsp_alloc => 1,
     weight_file => "C:/Users/gademb/stage2017/Gabriel/codegen/convgentest/conv-w1.nn",
     bias_file => "C:/Users/gademb/stage2017/Gabriel/codegen/convgentest/conv-b1.nn",
     input_int_part => 0,
@@ -386,7 +386,7 @@ maxpool_layer_mc_u12 : maxpool_layer_mc generic map(
     pool_size => 2,
     stride => 2,
     input_size => 28,
-    channels => 32
+    channels => 10
 ) port map(
     clk => clk,
     ready => ready_s13,
@@ -403,7 +403,7 @@ maxpool_layer_mc_u12 : maxpool_layer_mc generic map(
 );
 bram_pad_interlayer_u83 : bram_pad_interlayer generic map(
     init_file => "",
-    channels => 32,
+    channels => 10,
     channel_width => 8,
     zero_padding => 0,
     layer_size => 28
@@ -422,10 +422,10 @@ bram_pad_interlayer_u83 : bram_pad_interlayer generic map(
 conv_layer_mc_u24 : conv_layer_mc generic map(
     stride => 1,
     filter_size => 5,
-    filter_nb => 64,
+    filter_nb => 10,
     input_size => 18,
-    channels => 32,
-    dsp_alloc => 3,
+    channels => 10,
+    dsp_alloc => 5,
     weight_file => "C:/Users/gademb/stage2017/Gabriel/codegen/convgentest/conv-w2.nn",
     bias_file => "C:/Users/gademb/stage2017/Gabriel/codegen/convgentest/conv-b2.nn",
     input_int_part => 0,
@@ -452,7 +452,7 @@ conv_layer_mc_u24 : conv_layer_mc generic map(
 );
 bram_pad_interlayer_u93 : bram_pad_interlayer generic map(
     init_file => "",
-    channels => 32,
+    channels => 10,
     channel_width => 8,
     zero_padding => 2,
     layer_size => 14
@@ -472,7 +472,7 @@ maxpool_layer_mc_u36 : maxpool_layer_mc generic map(
     pool_size => 2,
     stride => 2,
     input_size => 14,
-    channels => 64
+    channels => 10
 ) port map(
     clk => clk,
     ready => ready_s37,
@@ -489,7 +489,7 @@ maxpool_layer_mc_u36 : maxpool_layer_mc generic map(
 );
 bram_pad_interlayer_u103 : bram_pad_interlayer generic map(
     init_file => "",
-    channels => 64,
+    channels => 10,
     channel_width => 8,
     zero_padding => 0,
     layer_size => 14
@@ -506,12 +506,12 @@ bram_pad_interlayer_u103 : bram_pad_interlayer generic map(
     wren => wren_s112
 );
 fc_layer_u48 : fc_layer generic map(
-    input_width => 3136,
+    input_width => 490,
     output_width => 10,
-    simd_width => 64,
+    simd_width => 10,
     input_spec => fixed_spec(fixed_spec'(int => 1, frac => 8)),
     weight_spec => fixed_spec(fixed_spec'(int => 1, frac => 7)),
-    op_arg_spec => fixed_spec(fixed_spec'(int => 15, frac => 15)),
+    op_arg_spec => fixed_spec(fixed_spec'(int => 13, frac => 15)),
     output_spec => fixed_spec(fixed_spec'(int => 2, frac => 8)),
     n_weights => 31360,
     pick_from_ram => true,
@@ -534,10 +534,10 @@ fc_layer_u48 : fc_layer generic map(
     op_receive => op_receive_s60
 );
 conv_to_fc_interlayer_u114 : conv_to_fc_interlayer generic map(
-    channels => 64,
+    channels => 10,
     channel_width => 8,
     layer_size => 7,
-    fc_simd => 64
+    fc_simd => 10
 ) port map(
     clk => clk,
     ready => ready_s115,
@@ -551,7 +551,7 @@ conv_to_fc_interlayer_u114 : conv_to_fc_interlayer generic map(
     wren_in => wren_in_s123
 );
 bias_op_u61 : bias_op generic map(
-    input_spec => fixed_spec(fixed_spec'(int => 15, frac => 15)),
+    input_spec => fixed_spec(fixed_spec'(int => 13, frac => 15)),
     bias_spec => fixed_spec(fixed_spec'(int => 1, frac => 11)),
     biases => reals(reals'( 0.9110350, 0.6515300, 0.2094400, 0.0287224, 0.3006430, 0.1099270, 0.6336950, 0.1806030, 0.3290790, 0.2056470))
 ) port map(
@@ -562,7 +562,7 @@ bias_op_u61 : bias_op generic map(
     op_receive => op_receive_s66
 );
 sigmoid_op_u67 : sigmoid_op generic map(
-    input_spec => fixed_spec(fixed_spec'(int => 16, frac => 15)),
+    input_spec => fixed_spec(fixed_spec'(int => 14, frac => 15)),
     output_spec => fixed_spec(fixed_spec'(int => 2, frac => 8)),
     step_precision => 2,
     bit_precision => 16
@@ -583,6 +583,7 @@ start_s3 <= start_s76;
 din_s6 <= dout_s78;
 row_s91 <= row_s10;
 wren_s92 <= wren_s11;
+wr_addr_s89 <= out_addr_s9;
 din_s97 <= dout_s19;
 ack_s16 <= load_done_s29;
 done_s95 <= done_s14;
@@ -592,6 +593,7 @@ start_s15 <= start_s86;
 din_s18 <= dout_s88;
 row_s101 <= row_s22;
 wren_s102 <= wren_s23;
+wr_addr_s99 <= out_addr_s21;
 din_s107 <= dout_s31;
 ack_s28 <= load_done_s41;
 done_s105 <= done_s26;
@@ -601,6 +603,7 @@ start_s27 <= start_s96;
 din_s30 <= dout_s98;
 row_s111 <= row_s34;
 wren_s112 <= wren_s35;
+wr_addr_s109 <= out_addr_s33;
 din_s119 <= dout_s43;
 ack_s40 <= ack_s118;
 done_s116 <= done_s38;
@@ -609,6 +612,7 @@ rd_addr_s110 <= addr_s44;
 start_s39 <= start_s106;
 din_s42 <= dout_s108;
 wren_in_s123 <= wren_s47;
+wr_addr_s121 <= out_addr_s45;
 in_a_s53 <= dout_s120;
 start_s51 <= start_s117;
 ready_s115 <= ready_s49;

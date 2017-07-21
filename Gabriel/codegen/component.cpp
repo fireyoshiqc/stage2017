@@ -84,6 +84,8 @@ string system::chain_main()
             ss << components[i + 1]->demand_signal(Sem::special_input_conv_row) << " <= " << components[i]->demand_signal(Sem::special_output_conv_row) << ";\n";
         if (find_by(components[i]->port, Sem::special_output_conv_wren) && find_by(components[i + 1]->prepended->port, Sem::special_input_conv_wren))
             ss << components[i + 1]->demand_signal(Sem::special_input_conv_wren) << " <= " << components[i]->demand_signal(Sem::special_output_conv_wren) << ";\n";
+        if (find_by(components[i]->port, Sem::front_offset_outtake) && find_by(components[i + 1]->prepended->port, Sem::back_offset_intake))
+            ss << components[i + 1]->demand_signal(Sem::back_offset_intake) << " <= " << components[i]->demand_signal(Sem::front_offset_outtake) << ";\n";
     }
     ss << components[components.size() - 1]->chain_internal();
     return ss.str();
