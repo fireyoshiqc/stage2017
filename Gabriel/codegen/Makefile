@@ -11,7 +11,7 @@ OBJS = $(patsubst %,$(ODIR)/%,$(_OBJS))
 
 all: codegen
 
-codegen: $(OBJS)
+nngen: $(OBJS)
 	$(CXX) -o $@ $(OBJS) $(CXXFLAGS)
 
 $(ODIR)/main.o: main.cpp sim_interface.h sigmoid_op.h block_interface.h bias_op.h feed_interface.h interlayer.h gen.h fc_layer.h dynamic.h test_interface.h convtest_interface.h util.h component.h parse.h dummy.h interface.h specification.h

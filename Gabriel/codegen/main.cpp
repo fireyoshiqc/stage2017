@@ -119,11 +119,15 @@ int main(int argc, char* argv[])
     //args = { "C:/Users/gademb/stage2017/Gabriel/codegen/realnet/realnet.nn", "-g", "C:/Users/gademb/stage2017/Gabriel/codegen/realnet/realnet120.int", "_" };
     vector<bool> opt; size_t sourcep;
     tie(opt, sourcep) = options(args);
-    if (args.empty() || opt[opt_help]){
+    if (args.empty()){
         help();
         return 0;
     }
+    if (opt[opt_help])
+        help();
     if (sourcep == args.size()){
+        if (opt[opt_help])
+            return 0;
         cerr << "Source missing from arguments.\n";
         help();
         return 1;
