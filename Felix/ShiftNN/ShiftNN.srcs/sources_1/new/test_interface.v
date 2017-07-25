@@ -56,7 +56,6 @@ module test_interface
     reg hrst = 1'b1;
     reg orst = 1'b1;
     
-    
     genvar i;
     for (i=0; i<max_hidden_neurons; i=i+1) begin
         hidden_an han (.clk(clk), .rst(hrst | ext_rst), .enb(henb[i]), .din(din), .weight(hdn_weights[i*8 +: 8]), .activation(activations[i*3 +: 3]));
@@ -89,9 +88,13 @@ module test_interface
     
     
     always @(posedge clk) begin
-        if (ext_rst) begin
+        if (ext_rst) begin // EXTERNAL RESET
             input_addr <= 0;
-            mode <= 1'b0;
+            h_addr <= 0;
+            din <= 0;
+            act_window <= 3'b111;
+            mode <= 2'b10;
+            done <= 1'b1;
         end
         else begin
             case (mode)
@@ -102,7 +105,7 @@ module test_interface
                     din <= input_data[input_addr];
                     if (input_addr + 1 < input_size) begin
                         input_addr <= input_addr + 1;
-                        mode <= 1'b0;
+                        mode <= 2'b00;
                     end
                     else begin
                         input_addr <= 0;
@@ -117,7 +120,7 @@ module test_interface
                     act_window <= activations[h_addr*3 +: 3];
                     if (h_addr + 1 < hidden_neurons) begin
                         h_addr <= h_addr + 1;
-                        mode <= 1'b1;
+                        mode <= 2'b01;
                     end
                     else begin
                         h_addr <= 0;
@@ -167,7 +170,4 @@ module test_interface
             end
         end
     end
-    
-    
-
 endmodule
