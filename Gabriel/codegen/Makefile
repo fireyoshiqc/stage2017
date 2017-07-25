@@ -1,6 +1,6 @@
 
 CXX = g++
-CXXFlAGS = -std=c++14 -O3 -I
+CXXFlAGS = -std=c++14 -O3 -I.
 
 ODIR = obj
 
