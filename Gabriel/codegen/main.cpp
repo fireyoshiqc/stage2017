@@ -54,9 +54,9 @@ The following actions can be undertaken:
                        network). Note: This doesn't work yet for conv layers
 <dest-file> can alternatively take the following values:
     _ : Discard the code for that network.
-    * : Send the generated code to stdout.
+    % : Send the generated code to stdout.
 
-example: nngen -h my-network.nn -g my-interf1.int * my-interf2.int system.vhd
+example: nngen -h my-network.nn -g my-interf1.int % my-interf2.int system.vhd
                -f inputs1.txt result1.txt inputs2.txt _
          Assuming my-network.nn contains 3 networks, this command:
          - Displays this text.
@@ -148,7 +148,7 @@ int main(int argc, char* argv[])
                         interface = generate_interface(parse_interface(sexpr::read_file(args[i]), folder_of(args[i])));
                     } else {
                         if (args[i] != "_"){
-                            if (args[i] == "*")
+                            if (args[i] == "%")
                                 cout << gen_code(networks[curnet], *interface);
                             else {
                                 ofstream outfile(args[i], ios::trunc);
@@ -174,7 +174,7 @@ int main(int argc, char* argv[])
                         got_inputs = true;
                     } else {
                         if (args[i] != "_"){
-                            if (args[i] == "*")
+                            if (args[i] == "%")
                                 for (double d : gen_feedforward(networks[curnet])(inputs))
                                     cout << d << ' ';
                             else {
