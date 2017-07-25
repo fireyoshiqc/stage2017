@@ -20,7 +20,7 @@ using namespace std;
 using namespace gen;
 using namespace util;
 
-//#define COMPILED_AS_TOOL
+#define COMPILED_AS_TOOL
 
 #ifdef COMPILED_AS_TOOL
 
@@ -51,7 +51,7 @@ The following actions can be undertaken:
                        network described by source. <data-file> is a file
                        containing the inputs and <dest-file> is the destination
                        file where the outputs are written (1 line = output of 1
-                       network).
+                       network). Note: This doesn't work yet for conv layers
 <dest-file> can alternatively take the following values:
     _ : Discard the code for that network.
     * : Send the generated code to stdout.
@@ -90,7 +90,7 @@ tuple<vector<bool>, size_t> options(const vector<string>& opts)
                 optvec[it->second] = true;
             else
                 cerr << "Unknown option \"" << opts[i].substr(2) << "\" ignored.\n";
-        } else
+        } else {
             for (size_t j = 1; j < opts[i].size(); ++j){
                 auto it = opt_map.find(string(1, opts[i][j]));
                 if (it != opt_map.end())
@@ -98,7 +98,17 @@ tuple<vector<bool>, size_t> options(const vector<string>& opts)
                 else
                     cerr << "Unknown option '" << opts[i][j] << "' ignored.\n";
             }
+        }
     return make_tuple(move(optvec), i);
+}
+
+string folder_of(string filename)
+{
+    while (!filename.empty() && filename.back() != '/')
+        filename.pop_back();
+    if (filename.empty())
+        filename += "./";
+    return move(filename);
 }
 
 int main(int argc, char* argv[])
@@ -106,6 +116,7 @@ int main(int argc, char* argv[])
     vector<string> args; args.reserve(argc - 1);
     for (int i = 1; i < argc; ++i)
         args.push_back(argv[i]);
+    //args = { "C:/Users/gademb/stage2017/Gabriel/codegen/realnet/realnet.nn", "-g", "C:/Users/gademb/stage2017/Gabriel/codegen/realnet/realnet120.int", "_" };
     vector<bool> opt; size_t sourcep;
     tie(opt, sourcep) = options(args);
     if (args.empty() || opt[opt_help]){
@@ -118,8 +129,8 @@ int main(int argc, char* argv[])
         return 1;
     }
     try {
-        auto networks = parse(!opt[opt_direct] ? sexpr::read_file(args[sourcep]) : sexpr::read(args[sourcep]));
-        for (size_t i = 0; i < args.size(); ++i)
+        auto networks = parse(!opt[opt_direct] ? sexpr::read_file(args[sourcep]) : sexpr::read(args[sourcep]), folder_of(args[sourcep]));
+        for (size_t i = sourcep + 1; i < args.size(); ++i)
             if (args[i] == "-g" || args[i] == "--generate"){
                 ++i;
                 unique_ptr<system_interface> interface = nullptr;
@@ -128,7 +139,7 @@ int main(int argc, char* argv[])
                         ++i;
                         break;
                     } else if (interface == nullptr){
-                        interface = generate_interface(parse_interface(sexpr::read_file(args[i])));
+                        interface = generate_interface(parse_interface(sexpr::read_file(args[i]), folder_of(args[i])));
                     } else {
                         if (args[i] != "_"){
                             if (args[i] == "*")

@@ -89,3 +89,4 @@
 !*.py
 !*.int
 !*.txt
+!Makefile
