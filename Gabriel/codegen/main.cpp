@@ -134,6 +134,7 @@ int main(int argc, char* argv[])
     }
     try {
         auto networks = parse(!opt[opt_direct] ? sexpr::read_file(args[sourcep]) : sexpr::read(args[sourcep]), folder_of(args[sourcep]));
+        cerr << "Opening network file " << args[sourcep] << "\n";
         for (size_t i = sourcep + 1; i < args.size(); ++i)
             if (args[i] == "-g" || args[i] == "--generate"){
                 ++i;
@@ -143,6 +144,7 @@ int main(int argc, char* argv[])
                         ++i;
                         break;
                     } else if (interface == nullptr){
+                        cerr << "Opening interface file " << args[i] << "\n";
                         interface = generate_interface(parse_interface(sexpr::read_file(args[i]), folder_of(args[i])));
                     } else {
                         if (args[i] != "_"){
@@ -151,7 +153,8 @@ int main(int argc, char* argv[])
                             else {
                                 ofstream outfile(args[i], ios::trunc);
                                 if (!outfile.is_open())
-                                    throw runtime_error("Can't open file \"" + args[i] + "\".");
+                                    throw runtime_error("Can't open output file \"" + args[i] + "\".");
+                                cerr << "Generating code file " << args[i] << "\n";
                                 outfile << gen_code(networks[curnet], *interface);
                             }
                         }
@@ -177,7 +180,7 @@ int main(int argc, char* argv[])
                             else {
                                 ofstream outfile(args[i], ios::trunc);
                                 if (!outfile.is_open())
-                                    throw runtime_error("Can't open file \"" + args[i] + "\".");
+                                    throw runtime_error("Can't open output file \"" + args[i] + "\".");
                                 for (double d : gen_feedforward(networks[curnet])(inputs))
                                     outfile << d << ' ';
                             }

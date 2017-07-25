@@ -147,12 +147,12 @@ bool parse_macro(sexpr& s, size_t i, const string& src_path)
 {
     if (s[i][0].string() == "define"){
         if (s[i].size() != 3 || s[i][1].is_tree())
-            throw runtime_error("In " + src_path + ": parse: For top[" + to_string(i) + "] macro definition: Invalid format (needs a name plus one arbitrary field).");
+            throw runtime_error("parse: For top[" + to_string(i) + "] macro definition: Invalid format (needs a name plus one arbitrary field).");
         for (size_t j = i + 1, stride; j < s.size(); j += stride)
             stride = substitute_macro(s[j], s, j, s[i][1].string(), s[i][2]);
     } else if (s[i][0].string() == "import"){
         if (s[i].size() != 3 || s[i][1].is_tree() || s[i][2].is_tree())
-            throw runtime_error("In " + src_path + ": parse: For top[" + to_string(i) + "] macro importation: Invalid format (needs a name plus a file path).");
+            throw runtime_error("parse: For top[" + to_string(i) + "] macro importation: Invalid format (needs a name plus a file path).");
         for (size_t j = i + 1, stride; j < s.size(); j += stride)
             stride = substitute_macro(s[j], s, j, s[i][1].string(), sexpr_field(sexpr::read_file(path_relative_to(s[i][2].string(), src_path))));
     } else
@@ -163,13 +163,12 @@ bool parse_macro(sexpr& s, size_t i, const string& src_path)
 vector<system_specification> parse(sexpr s, const string& src_path)
 {
     vector<system_specification> res;
-    string caller_full = "In " + src_path + ": parse";
-    top_level_parse(caller_full, "nnet-codegen", s, src_path, [&](size_t i){
+    top_level_parse("parse", "nnet-codegen", s, src_path, [&](size_t i){
         if (s[i][0].string() == "network"){
             if (s[i].size() == 1 || s[i][1].is_leaf() || s[i][1].empty() || s[i][1][0].is_tree() || s[i][1][0].string() != "input")
-                throw runtime_error(caller_full + ": Missing input specification at beginning of top[" + to_string(i) + "] network.");
+                throw runtime_error("parse: Missing input specification at beginning of top[" + to_string(i) + "] network.");
             if (s[i][1].size() != 2 && s[i][1].size() != 3 && s[i][1].size() != 5)
-                throw runtime_error(caller_full + ": Input specification at beginning of top[" + to_string(i) + "] network needs 1, 2 or 4 arguments (not " + to_string(s[i][1].size() - 1) + ").");
+                throw runtime_error("parse: Input specification at beginning of top[" + to_string(i) + "] network needs 1, 2 or 4 arguments (not " + to_string(s[i][1].size() - 1) + ").");
             res.emplace_back();
             if (s[i][1].size() == 5){
                 res.back().input_width = parse_positive_integer(s[i][1][1], "first argument of input of top[" + to_string(i) + "] network");
@@ -184,7 +183,7 @@ vector<system_specification> parse(sexpr s, const string& src_path)
             }
             for (size_t j = 2; j < s[i].size(); ++j){
                 if (s[i][j].is_leaf() || s[i][j].empty() || s[i][j][0].is_tree())
-                    throw runtime_error(caller_full + ": For top[" + to_string(i) + "] network: Argument " + to_string(j - 1) + " is not a layer.");
+                    throw runtime_error("parse: For top[" + to_string(i) + "] network: Argument " + to_string(j - 1) + " is not a layer.");
                 string pos_info = "top[" + to_string(i) + "] network, layer " + to_string(j);
                 res.back().parts.push_back(layer_spec_parser_from_name(s[i][j][0].string(), pos_info)(s[i][j], pos_info));
             }
@@ -198,18 +197,17 @@ vector<system_specification> parse(sexpr s, const string& src_path)
 sexpr parse_interface(sexpr s, const string& src_path)
 {
     sexpr res;
-    string caller_full = "In " + src_path + ": parse-interface";
-    top_level_parse(caller_full, "int-codegen", s, src_path, [&](size_t i){
+    top_level_parse("parse-interface", "int-codegen", s, src_path, [&](size_t i){
         if (s[i][0].string() == "interface"){
             if (s[i].size() == 1 || (s[i].size() > 1 && !s[i][1].is_leaf()))
-                throw runtime_error(caller_full + ": Interface declaration at top[" + to_string(i) + "] is missing a name.");
+                throw runtime_error("parse_interface: Interface declaration at top[" + to_string(i) + "] is missing a name.");
             res = s[i].sexpr();
         } else
             return false;
         return true;
     });
     if (res.empty())
-        throw runtime_error(caller_full + ": Could not find an interface declaration in the interface file \"" + src_path + "\".");
+        throw runtime_error("parse_interface: Could not find an interface declaration in the interface file \"" + src_path + "\".");
     return move(res);
 }
 
