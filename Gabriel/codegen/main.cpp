@@ -133,8 +133,8 @@ int main(int argc, char* argv[])
         return 1;
     }
     try {
-        auto networks = parse(!opt[opt_direct] ? sexpr::read_file(args[sourcep]) : sexpr::read(args[sourcep]), folder_of(args[sourcep]));
         cerr << "Opening network file " << args[sourcep] << "\n";
+        auto networks = parse(!opt[opt_direct] ? sexpr::read_file(args[sourcep]) : sexpr::read(args[sourcep]), folder_of(args[sourcep]));
         for (size_t i = sourcep + 1; i < args.size(); ++i)
             if (args[i] == "-g" || args[i] == "--generate"){
                 ++i;
