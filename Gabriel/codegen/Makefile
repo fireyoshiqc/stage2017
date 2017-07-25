@@ -9,7 +9,7 @@ SRCS = main.cpp interlayer.cpp util.cpp component.cpp specification.cpp parse.cp
 _OBJS = $(subst .cpp,.o,$(SRCS))
 OBJS = $(patsubst %,$(ODIR)/%,$(_OBJS))
 
-all: codegen
+all: nngen
 
 nngen: $(OBJS)
 	$(CXX) -o $@ $(OBJS) $(CXXFLAGS)
