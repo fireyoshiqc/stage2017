@@ -1,5 +1,6 @@
 #include "util.h"
 
+#include <iostream>
 namespace util
 {
 using namespace std;
@@ -55,23 +56,29 @@ void pop_path(string& path)
 string path_relative_to(string rel_path, string abs_path)
 {
     for (;;) {
+        cerr << "\npath_relative_to: \"" << rel_path << "\" and \"" << abs_path << "\"\n";
         if (rel_path.find("./") == 0)
-            rel_path = rel_path.substr(2);
+            cerr << 'a',rel_path = rel_path.substr(2);
         else if (rel_path.find("../") == 0){
+            cerr << 'b';
             rel_path = rel_path.substr(3);
             pop_path(abs_path);
         } else if (rel_path == "."){
+            cerr << 'c';
             rel_path.clear();
             break;
         } else if (rel_path == ".."){
+            cerr << 'd';
             rel_path.clear();
             pop_path(abs_path);
             break;
         } else
-            break;
+            {cerr << 'e';break;}
     }
+    cerr << 'f';
     if (abs_path.empty() || abs_path.back() != '/')
-        abs_path.push_back('/');
+        cerr << 'g', abs_path.push_back('/');
+    cerr << 'h';
     return abs_path + rel_path;
 }
 
