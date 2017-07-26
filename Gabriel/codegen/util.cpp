@@ -47,16 +47,28 @@ void pop_path(string& path)
 {
     if (path.empty())
         return;
+    if (path == "./"){
+        path = "../";
+        return;
+    }
+    if (path.size() >= 3 && path.substr(0, 3) == "../"){
+        path = "../" + path;
+        return;
+    }
     if (path.back() == '/' || path.back() == '\\')
         path.pop_back();
+    if (path.empty())
+        return;
     while (path.back() != '/' && path.back() != '\\')
         path.pop_back();
 }
 
 string path_relative_to(string rel_path, string abs_path)
 {
+    if (abs_path == "./")
+        return rel_path;
     for (;;) {
-        cerr << "\npath_relative_to: \"" << rel_path << "\" and \"" << abs_path << "\"\n";
+        cerr << "\npath_relative_to: \"" << rel_path << "\" and \"" << abs_path << "\"\n";// ../dfgfdg ./
         if (rel_path.find("./") == 0)
             cerr << 'a',rel_path = rel_path.substr(2);
         else if (rel_path.find("../") == 0){
