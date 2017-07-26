@@ -68,29 +68,23 @@ string path_relative_to(string rel_path, string abs_path)
     if (abs_path == "./")
         return rel_path;
     for (;;) {
-        cerr << "\npath_relative_to: \"" << rel_path << "\" and \"" << abs_path << "\"\n";// ../dfgfdg ./
         if (rel_path.find("./") == 0)
-            cerr << 'a',rel_path = rel_path.substr(2);
+            rel_path = rel_path.substr(2);
         else if (rel_path.find("../") == 0){
-            cerr << 'b';
             rel_path = rel_path.substr(3);
             pop_path(abs_path);
         } else if (rel_path == "."){
-            cerr << 'c';
             rel_path.clear();
             break;
         } else if (rel_path == ".."){
-            cerr << 'd';
             rel_path.clear();
             pop_path(abs_path);
             break;
         } else
-            {cerr << 'e';break;}
+            break;
     }
-    cerr << 'f';
     if (abs_path.empty() || abs_path.back() != '/')
-        cerr << 'g', abs_path.push_back('/');
-    cerr << 'h';
+        abs_path.push_back('/');
     return abs_path + rel_path;
 }
 

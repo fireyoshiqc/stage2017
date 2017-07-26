@@ -126,19 +126,16 @@ size_t substitute_macro(sexpr_field& target, sexpr& target_parent, size_t target
 {
     if (target.is_leaf()){
         if (target.string() == '$' + label)
-            cerr << "ATTEMPTING TO REPLACE ONE ($)... ", target = body, cerr << "DONE\n";
+            target = body;
         else if (target.string() == '@' + label){
-            cerr << "ATTEMPTING TO REPLACE ONE (@)... ";
             target_parent.fields.erase(target_parent.fields.begin() + target_index);
             if (body.is_leaf())
-                cerr << "LEAF! ", target_parent.fields.insert(target_parent.fields.begin() + target_index, body);
+                target_parent.fields.insert(target_parent.fields.begin() + target_index, body);
             else
-                cerr << "TREE! ", target_parent.fields.insert(target_parent.fields.begin() + target_index, body.sexpr().fields.begin(), body.sexpr().fields.end());
-            cerr << "DONE\n";
+                target_parent.fields.insert(target_parent.fields.begin() + target_index, body.sexpr().fields.begin(), body.sexpr().fields.end());
             return body.is_tree() ? body.size() : 1;
         }
     } else {
-        cerr << '.';
         sexpr& s = target.sexpr();
         for (size_t i = 0, stride; i < s.size(); i += stride)
             stride = substitute_macro(s[i], s, i, label, body);
@@ -154,13 +151,10 @@ bool parse_macro(sexpr& s, size_t i, const string& src_path)
         for (size_t j = i + 1, stride; j < s.size(); j += stride)
             stride = substitute_macro(s[j], s, j, s[i][1].string(), s[i][2]);
     } else if (s[i][0].string() == "import"){
-        cerr << "IMPORT MACRO DETECTED\n";
         if (s[i].size() != 3 || s[i][1].is_tree() || s[i][2].is_tree())
             throw runtime_error("parse: For top[" + to_string(i) + "] macro importation: Invalid format (needs a name plus a file path).");
-        cerr << "IT SEEMS THAT THE IMPORT MACRO NAMED \""; cerr << s[i][1].string(); cerr << "\" HAS A FILE WITH EXPANDED PATH \""; cerr << path_relative_to(s[i][2].string(), src_path) << "\"\n";
         for (size_t j = i + 1, stride; j < s.size(); j += stride)
             stride = substitute_macro(s[j], s, j, s[i][1].string(), sexpr_field(sexpr::read_file(path_relative_to(s[i][2].string(), src_path))));
-        cerr << "IMPORT MACRO SUBSTITUTION DONE\n";
     } else
         return false;
     return true;
