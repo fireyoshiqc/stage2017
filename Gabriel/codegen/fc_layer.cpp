@@ -90,6 +90,7 @@ void fc_layer_component::propagate(component& prev)
     size_t prevwidth = find_by(prev.generic, Sem::output_width).value[0];
     find_by(generic, Sem::input_width).value.num = { double(prevwidth) };
     find_by(port, Sem::main_input).type.set_range(prevwidth * (prevspec[0] + prevspec[1]) - 1, 0);
+    find_by(port, Sem::back_offset_outtake).type.set_range(bits_needed(prevwidth / find_by(generic, Sem::param, "simd_width").value[0] - 1) - 1, 0);
     find_by(generic, Sem::param, "pick_from_ram").value.num = { 0.0 };//{ dynamic_cast<conv2d_family_layer_component*>(&prev) != nullptr ? 1.0 : 0.0 };
     side_propagate(prevwidth);
     prepended = interlayer_between(static_cast<layer_component*>(&prev), this);
