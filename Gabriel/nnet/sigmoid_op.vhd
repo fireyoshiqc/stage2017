@@ -107,7 +107,7 @@ begin
 --            else
 --                output <= output_reg;
 --            end if;
-            output <= resize(DEBUG_INPUT_REG, output);
+            output <= resize(DEBUG_INPUT_REG, mk(output_spec));
             op_send <= '1';
 			state <= idle;
 		end case;
