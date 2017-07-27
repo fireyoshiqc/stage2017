@@ -138,41 +138,30 @@ architecture fc_computation of fc_computation is
     --attribute dont_touch : string;
     --attribute dont_touch of op_argument_reg : signal is "true";
     
-    signal op_send_off_delay : std_logic := '0';
-	signal debug : op_arg_word_t;
+    signal debug : op_arg_word_t;
 begin
     
-    --out_a <= out_a_reg;
-    --op_argument <= op_argument_reg;
+    out_a <= out_a_reg;
+    op_argument <= op_argument_reg;
 
 process(clk, rst, in_a, in_offset, w_data)
 begin
     if rising_edge(clk) then
-        if op_send_off_delay = '1' then
-            --op_argument <= op_argument_reg;
-            op_send <= '1';
-            op_send_off_delay <= '0';
-        else
-            op_send <= '0';
-        end if;
         case directives is
         when directives_from(directive_mul_acc) =>
             for i in simd_mulacc_cells'range loop
                 simd_mulacc_cells(i) <= resize(simd_mulacc_cells(i) + get(w_data, i, mk(weight_spec)) * get(in_a, if_then_else(pick_from_ram, 0, to_integer(in_offset)) + i, mk(input_spec)), simd_mulacc_cells(i));
 			end loop;
         when directives_from(directive_reduce) =>
-            op_argument <= reduce2(prepare2(simd_mulacc_cells), simd_mulacc_cells'length, specof(simd_mulacc_cells(0)));--resize(reduce(prepare2(simd_mulacc_cells), simd_mulacc_cells'length, specof(simd_mulacc_cells(0))), mk(op_arg_spec));--resize(reduceX(simd_mulacc_cells, 0), mk(op_arg_spec));
-            --op_send <= '1';
-            op_send_off_delay <= '1';
+            op_argument_reg <= reduce2(prepare2(simd_mulacc_cells), simd_mulacc_cells'length, specof(simd_mulacc_cells(0)));--resize(reduce(prepare2(simd_mulacc_cells), simd_mulacc_cells'length, specof(simd_mulacc_cells(0))), mk(op_arg_spec));--resize(reduceX(simd_mulacc_cells, 0), mk(op_arg_spec));
+            op_send <= '1';
         when directives_from(directive_reset_mul_acc) =>
-            set(out_a, to_integer(out_offset), op_result);
+            set(out_a_reg, to_integer(out_offset), op_result);
             for i in simd_mulacc_cells'range loop
                 simd_mulacc_cells(i) <= (others => '0');
             end loop;
         when others =>
-            --if op_send_off_delay = '0' then
-            --    op_send <= '0';
-            --end if;
+            op_send	<= '0';
         end case;
     end if;
 end process;
