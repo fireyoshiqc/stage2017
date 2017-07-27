@@ -124,9 +124,6 @@ end component;
 	  signal out_a_sig : std_logic_vector(output_width * size(output_spec) - 1 downto 0);
 	
 	  signal w_query : std_logic;
-    
-    signal op_result_reg : sfixed(mk(output_spec)'range);
-    signal op_receive_reg : std_logic := '0';
 
 begin
 
@@ -138,18 +135,6 @@ begin
 	  out_offset <= out_offset_sig;
     
     simd_offset <= std_logic_vector(simd_offset_sig) when simd_offset_sig < input_width / simd_width else std_logic_vector(to_unsigned(0, simd_offset_sig'length));
-    
-process(clk)
-begin
-    if rising_edge(clk) then
-        if op_receive = '1' then
-            op_result_reg <= op_result;
-            op_receive_reg <= '1';
-        else
-            op_receive_reg <= '0';
-        end if;
-    end if;
-end process;
 	
 fc_cont : fc_controller generic map(
     input_width => input_width,
@@ -167,7 +152,7 @@ port map (
     w_offset => w_offset,
     out_offset => out_offset_sig,
     simd_offset => simd_offset_sig,
-    op_receive => op_receive_reg
+    op_receive => op_receive
 );
 
 fc_comp : fc_computation generic map(
@@ -190,7 +175,7 @@ port map (
     w_data => w_data,
     out_a => out_a,
     op_argument => op_argument,
-    op_result => op_result_reg,
+    op_result => op_result,
     op_send => op_send
 );
 fc_w : fc_weights generic map(

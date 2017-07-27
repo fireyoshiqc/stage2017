@@ -31,6 +31,7 @@ architecture sigmoid_op of sigmoid_op is
 	signal in_sgn : std_logic;
 	signal state : state_t := idle;
 	signal abs_input_reg : sfixed(mk(abs(input_spec))'range);
+    signal DEBUG_INPUT_REG : sfixed(mk(input_spec)'range);
 	--signal input_reg : sfixed(input'range);
     signal output_reg : sfixed(output'range);
     --signal op_send_sig : std_logic := '0';
@@ -69,41 +70,6 @@ architecture sigmoid_op of sigmoid_op is
     constant coeffs : coeffs_t := coeffs_init;
     signal coeff : coeff_t;
     
---    procedure calculate(signal dest : out sfixed; signal from : in sfixed) is
---        variable x : sfixed(mk(abs(input_spec))'range);
---        variable y : sfixed(output_spec.int - 1 downto -output_spec.frac);--(mk(output_spec)'range);
---        variable index : unsigned(bits_needed(max_approx) + step_precision - 1 downto 0);
---        variable a : sfixed(bits_needed(max_approx) downto -step_precision);
---        variable coeff : coeff_t;
---        --variable dummy : coeffs_t;
---    begin
---        --dummy := coeffs_init;
---        x := abs(from);
---        if x >= real(max_approx) then
---            y := to_sfixed(1.0, y);
---        else
---            index := unsigned(shift_range(std_logic_vector(x(bits_needed(max_approx) - 1 downto -step_precision)), step_precision));--unsigned(std_logic_vector(x(bits_needed(max_approx) - 1 downto -step_precision)));
---            coeff := coeffs(to_integer(index));
---            a := to_sfixed("0" & std_logic_vector(index), a);
---            y := resize(coeff.approx + (x - a) * coeff.slope, y);
---        end if;
---        if from(from'high) = '1' then
---            y := resize(1 - y, y);
---        end if;
---        dest <= y;
---    end calculate;
---    procedure calculate(signal dest : out sfixed; signal from : in sfixed; signal from_sgn : in std_logic) is
---        variable y : sfixed(output_spec.int - 1 downto -output_spec.frac);
---        variable a : sfixed(bits_needed(max_approx) downto -step_precision);
---    begin
---        a := to_sfixed("0" & std_logic_vector(index), a);
---        y := resize(coeff.approx + (from - a) * coeff.slope, y);
---        if from_sgn = '1' then
---            y := resize(1 - y, y);
---        end if;
---        dest <= y;
---    end calculate;
-    
 begin
 process(clk)
     variable abs_input_var : sfixed(mk(abs(input_spec))'range);
@@ -116,47 +82,35 @@ begin
 		when idle =>
 			op_send <= '0';
 			if op_receive = '1'	then
-				abs_input_var := abs(input);
-				in_sgn <= input(input'high);
-				if abs_input_var >= real(max_approx) then
-					output_reg <= to_sfixed(1.0, output_reg);
-					state <= done;
-				else
-				    index := unsigned(shift_range(std_logic_vector(abs_input_var(bits_needed(max_approx) - 1 downto -step_precision)), step_precision));
-				    coeff <= coeffs(to_integer(index));
-				    abs_input_reg <= abs_input_var;
-				    state <= calculating;
-				end if;
+                DEBUG_INPUT_REG <= input;
+                state <= calculating;
+--				abs_input_var := abs(input);
+--				in_sgn <= input(input'high);
+--				if abs_input_var >= real(max_approx) then
+--					output_reg <= to_sfixed(1.0, output_reg);
+--					state <= done;
+--				else
+--				    index := unsigned(shift_range(std_logic_vector(abs_input_var(bits_needed(max_approx) - 1 downto -step_precision)), step_precision));
+--				    coeff <= coeffs(to_integer(index));
+--				    abs_input_reg <= abs_input_var;
+--				    state <= calculating;
+--				end if;
 			end if;
 		when calculating =>
-			a := to_sfixed("0" & std_logic_vector(index), a);
-            y := resize(coeff.approx + (abs_input_reg - a) * coeff.slope, y);
-            output_reg <= y;
+--			a := to_sfixed("0" & std_logic_vector(index), a);
+--            y := resize(coeff.approx + (abs_input_reg - a) * coeff.slope, y);
+--            output_reg <= y;
 			state <= done;
         when done =>
-            if in_sgn = '1' then
-                output <= resize(1 - output_reg, output_reg);
-            else
-                output <= output_reg;
-            end if;
+--            if in_sgn = '1' then
+--                output <= resize(1 - output_reg, output_reg);
+--            else
+--                output <= output_reg;
+--            end if;
+            output <= resize(DEBUG_INPUT_REG, output);
             op_send <= '1';
 			state <= idle;
 		end case;
---        if op_send_sig = '1' then
---            op_send <= '0';
---            op_send_sig <= '0';
---        end if;
---        if state = '0' then
---            if op_receive = '1' then
---                calculate(reg, input);
---                state <= '1';
---            end if;
---        else
---            output <= reg;
---            op_send <= '1';
---            op_send_sig <= '1';
---            state <= '0';
---        end if;
     end if;
 end process;
 end sigmoid_op;
