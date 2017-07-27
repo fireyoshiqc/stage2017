@@ -142,7 +142,7 @@ begin
 process(clk)
 begin
     if rising_edge(clk) then
-        if op_receive := '1' then
+        if op_receive = '1' then
             op_result_reg <= op_result;
             op_receive_reg <= '1';
         else
