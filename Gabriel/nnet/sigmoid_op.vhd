@@ -31,7 +31,6 @@ architecture sigmoid_op of sigmoid_op is
 	signal in_sgn : std_logic;
 	signal state : state_t := idle;
 	signal abs_input_reg : sfixed(mk(abs(input_spec))'range);
-    signal DEBUG_INPUT_REG : sfixed(mk(input_spec)'range);
 	--signal input_reg : sfixed(input'range);
     signal output_reg : sfixed(output'range);
     --signal op_send_sig : std_logic := '0';
@@ -82,32 +81,29 @@ begin
 		when idle =>
 			op_send <= '0';
 			if op_receive = '1'	then
-                DEBUG_INPUT_REG <= input;
-                state <= calculating;
---				abs_input_var := abs(input);
---				in_sgn <= input(input'high);
---				if abs_input_var >= real(max_approx) then
---					output_reg <= to_sfixed(1.0, output_reg);
---					state <= done;
---				else
---				    index := unsigned(shift_range(std_logic_vector(abs_input_var(bits_needed(max_approx) - 1 downto -step_precision)), step_precision));
---				    coeff <= coeffs(to_integer(index));
---				    abs_input_reg <= abs_input_var;
---				    state <= calculating;
---				end if;
+				abs_input_var := abs(input);
+				in_sgn <= input(input'high);
+				if abs_input_var >= real(max_approx) then
+					output_reg <= to_sfixed(1.0, output_reg);
+					state <= done;
+				else
+				    index := unsigned(shift_range(std_logic_vector(abs_input_var(bits_needed(max_approx) - 1 downto -step_precision)), step_precision));
+				    coeff <= coeffs(to_integer(index));
+				    abs_input_reg <= abs_input_var;
+				    state <= calculating;
+				end if;
 			end if;
 		when calculating =>
---			a := to_sfixed("0" & std_logic_vector(index), a);
---            y := resize(coeff.approx + (abs_input_reg - a) * coeff.slope, y);
---            output_reg <= y;
+			a := to_sfixed("0" & std_logic_vector(index), a);
+            y := resize(coeff.approx + (abs_input_reg - a) * coeff.slope, y);
+            output_reg <= y;
 			state <= done;
         when done =>
---            if in_sgn = '1' then
---                output <= resize(1 - output_reg, output_reg);
---            else
---                output <= output_reg;
---            end if;
-            output <= resize(DEBUG_INPUT_REG, mk(output_spec));
+            if in_sgn = '1' then
+                output <= resize(1 - output_reg, output_reg);
+            else
+                output <= output_reg;
+            end if;
             op_send <= '1';
 			state <= idle;
 		end case;
