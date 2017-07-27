@@ -138,7 +138,8 @@ architecture fc_computation of fc_computation is
     --attribute dont_touch : string;
     --attribute dont_touch of op_argument_reg : signal is "true";
     
-    signal debug : op_arg_word_t;
+    signal op_send_off_delay : std_logic := '0';
+	signal debug : op_arg_word_t;
 begin
     
     out_a <= out_a_reg;
@@ -147,6 +148,10 @@ begin
 process(clk, rst, in_a, in_offset, w_data)
 begin
     if rising_edge(clk) then
+        if op_send_off_delay = '1' then
+            op_send <= '0';
+            op_send_off_delay <= '0';
+        end if;
         case directives is
         when directives_from(directive_mul_acc) =>
             for i in simd_mulacc_cells'range loop
@@ -161,7 +166,8 @@ begin
                 simd_mulacc_cells(i) <= (others => '0');
             end loop;
         when others =>
-            op_send	<= '0';
+            --op_send <= '0';
+            op_send_off_delay <= '1';
         end case;
     end if;
 end process;

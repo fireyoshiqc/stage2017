@@ -104,11 +104,7 @@ begin
             in_offset <= in_offset_var;
             in_counter <= to_unsigned(0, in_counter'length);
             simd_offset <= to_unsigned(0, simd_offset'length);
-			if op_receive = '0'	then
-				state <= wait_for_result;
-			else
-				state <= reset_mul_acc;
-			end if;
+			state <= wait_for_result;
         when wait_for_result =>
             if op_receive = '0'	then
                 state <= wait_for_result;
