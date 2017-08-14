@@ -25,7 +25,7 @@ module hidden_an
     input clk, rst, enb,
     input [2:0] din,
     input signed [7:0] weight, // WEIGHTS HAVE 1 SIGN BIT AND 7 FRAC BITS
-    //input [31:0] nb_inputs,
+    input signed [7:0] bias, // BIAS HAS 1 SIGN BIT AND 7 FRAC BITS
     output reg [2:0] activation = 0
     );
     
@@ -33,8 +33,8 @@ module hidden_an
     reg signed [15:0] act;
     
     always @(posedge clk) begin
-        if (rst) begin
-            acc <= 0;
+        if (rst) begin // LOAD BIAS ON RESET (DATA CHANGE)
+            acc <= bias;
         end
         else if (enb) begin
             if (din) begin

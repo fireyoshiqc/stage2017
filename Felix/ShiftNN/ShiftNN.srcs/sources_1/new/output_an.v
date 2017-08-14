@@ -25,12 +25,13 @@ module output_an
     input clk, rst, enb,
     input [2:0] activation,
     input signed [7:0] weight,
+    input signed [7:0] bias,
     output reg signed [15:0] acc = 0
     );
     
     always @(posedge clk) begin
-        if (rst) begin
-            acc <= 0;
+        if (rst) begin // LOAD BIAS ON RESET
+            acc <= bias;
         end
         else if (enb) begin
             if (activation == 3'b111) begin

@@ -23,7 +23,7 @@
 module test_interface
     #(
     //parameter input_size = 784,
-    parameter max_hidden_neurons = 1000,
+    parameter max_hidden_neurons = 100,
     parameter max_output_classes = 30,
     parameter input_mem_size = 1024
     )
@@ -34,6 +34,8 @@ module test_interface
     input [7:0] output_classes,
     input [max_hidden_neurons*8 -1 : 0] hdn_weights, // NEED TO CHOOSE SOMETHING TO ENTER WEIGHT DATA
     input [max_output_classes*8 -1 : 0] out_weights, // NEED TO CHOOSE SOMETHING TO ENTER WEIGHT DATA
+    input [max_hidden_neurons*8 -1 : 0] hdn_bias,
+    input [max_output_classes*8 -1 : 0] out_bias,
     output [max_output_classes*16 - 1 : 0] out_bus, // NEED TO CHOOSE SOMETHING TO OUTPUT DATA
     output reg done = 1'b1
     );
@@ -58,10 +60,10 @@ module test_interface
     
     genvar i;
     for (i=0; i<max_hidden_neurons; i=i+1) begin
-        hidden_an han (.clk(clk), .rst(hrst | ext_rst), .enb(henb[i]), .din(din), .weight(hdn_weights[i*8 +: 8]), .activation(activations[i*3 +: 3]));
+        hidden_an han (.clk(clk), .rst(hrst | ext_rst), .enb(henb[i]), .din(din), .weight(hdn_weights[i*8 +: 8]), .bias(hdn_bias[i*8 +: 8]), .activation(activations[i*3 +: 3]));
     end
     for (i=0; i<max_output_classes; i=i+1) begin
-        output_an oan (.clk(clk), .rst(orst | ext_rst), .enb(oenb[i]), .activation(act_window), .weight(out_weights[i*8 +: 8]), .acc(out_bus[i*16 +: 16]));
+        output_an oan (.clk(clk), .rst(orst | ext_rst), .enb(oenb[i]), .activation(act_window), .weight(out_weights[i*8 +: 8]), .bias(out_bias[i*8 +: 8]), .acc(out_bus[i*16 +: 16]));
     end
     
     integer j;
@@ -95,6 +97,22 @@ module test_interface
             act_window <= 3'b111;
             mode <= 2'b10;
             done <= 1'b1;
+            for (j=0; j<max_hidden_neurons; j=j+1) begin
+                if (j<hidden_neurons) begin
+                    henb[j] <= 1'b1;
+                end
+                else begin
+                    henb[j] <= 1'b0;
+                end
+            end
+            for (j=0; j<max_output_classes; j=j+1) begin
+                if (j<output_classes) begin
+                    oenb[j] <= 1'b1;
+                end
+                else begin
+                    oenb[j] <= 1'b0;
+                end
+            end
         end
         else begin
             case (mode)
@@ -148,26 +166,5 @@ module test_interface
         end
         
     end
-    
-    always @(hidden_neurons) begin
-        for (j=0; j<max_hidden_neurons; j=j+1) begin
-            if (j<hidden_neurons) begin
-                henb[j] <= 1'b1;
-            end
-            else begin
-                henb[j] <= 1'b0;
-            end
-        end
-    end
-    
-    always @(output_classes) begin
-        for (j=0; j<max_output_classes; j=j+1) begin
-            if (j<output_classes) begin
-                oenb[j] <= 1'b1;
-            end
-            else begin
-                oenb[j] <= 1'b0;
-            end
-        end
-    end
+
 endmodule
