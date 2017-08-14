@@ -39,7 +39,7 @@ module test_interface
     input [max_output_classes*8 -1 : 0] out_bias, // From BRAM or register (load max_output_classes 8-bit biases at a time, at most)
     input [2:0] data_in, // From BRAM (load one 3-bit data item)
     output reg [clogb2(round_to_next_two(input_mem_size))-1:0] data_addr = 0, // Address for data_in AND hdn_weights
-    output reg [clogb2(round_to_next_two(input_mem_size))-1:0] ow_addr = 0, // Address for out_weights
+    output reg [clogb2(round_to_next_two(max_hidden_neurons))-1:0] ow_addr = 0, // Address for out_weights
     //output reg [clogb2(round_to_next_two(input_mem_size))-1:0] output_addr = 0, // Address for out_bus if using BRAM
     output [max_output_classes*16 - 1 : 0] out_bus, // To BRAM or register (write max_output_classes 16-bit results at a time, at most)
     output reg done = 1'b1 // To control register or control block
@@ -56,7 +56,7 @@ module test_interface
     reg [2:0] din;
     reg [max_hidden_neurons-1:0] henb = 0;
     reg [max_output_classes-1:0] oenb = 0;
-    reg [15:0] h_addr = 0;
+    //reg [15:0] h_addr = 0;
     
     wire [3*max_hidden_neurons - 1:0] activations;
     reg [2:0] act_window = 0;
@@ -99,7 +99,7 @@ module test_interface
         if (ext_rst) begin // EXTERNAL RESET
             //input_addr <= 0;
             data_addr <= 0;
-            h_addr <= 0;
+            //h_addr <= 0;
             din <= 0;
             act_window <= 3'b111;
             mode <= 2'b10;
