@@ -14,7 +14,7 @@ A module that generates random 8-bit numbers using 32-bit LFSRs (Linear Feedback
 This design is optimized for minimal area. It can safely operate at 300 MHz (target frequency), up to 440 MHz (after that, negative slack begins to appear).
 ### Gabriel
 #### nnet
-A project containing a parametrizable fixed-point VHDL implementation of a fully connected neural network layer, plus interlayers to pass data between fc layers and from a conv layer to an fc layer. Also, an implementation of the sigmoid activation function based on linear interpolation between function samples from a ROM.
+A project containing a parametrizable fixed-point VHDL implementation of a fully connected neural network layer, plus interlayers to pass data between fc layers. Also, an implementation of the sigmoid activation function based on linear interpolation between function samples from a ROM.
 #### codegen
 A format (.nn files) for specifying nnet networks at a high level, plus a program (written in C++, compilable as a library or a command line tool) for converting .nn files to VHDL code that instantiates and connects the needed nnet modules.
 #### test_oled
