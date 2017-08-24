@@ -1,4 +1,9 @@
-/// this code is meant to be compiled with C++14 (-std=c++14)
+/// codegen
+/// Author: Gabriel Demers
+/// Generates a top-level .vhd file from a .nn specification file and a .int interface file.
+/// Comment line 27 of this file ("#define COMPILED_AS_TOOL") to use the C++ interface (examples at the bottom).
+/// Leave line 27 uncommented to compile the project as a command line tool.
+/// This code is meant to be compiled with C++14 (-std=c++14).
 
 #include <vector>
 #include <fstream>
@@ -250,9 +255,9 @@ void toy_network2()
 {
     auto network = parse(sexpr::read_file("C:/Users/gademb/stage2017/Gabriel/codegen/toynetwork.nn"))[0];
     assert_valid(network);
-    for (double out : gen_feedforward(network)({ 0.270478, 0.808408, 0.463890, 0.291382, 0.800599, 0.203051 }))
+    for (double out : gen_feedforward(network)(vector<double>{ 0.270478, 0.808408, 0.463890, 0.291382, 0.800599, 0.203051 }))
         cout << out << ' ';
-    auto interface = sim_interface({ 0.270478, 0.808408, 0.463890, 0.291382, 0.800599, 0.203051 });
+    auto interface = test_interface(vector<double>{ 0.270478, 0.808408, 0.463890, 0.291382, 0.800599, 0.203051 });
     ofstream file("C:/Users/gademb/stage2017/Gabriel/nnet/system.vhd", ios::trunc);
     if (!file.is_open())
         throw runtime_error("Can't open system.vhd.");
@@ -264,10 +269,10 @@ string actual_path = "C:/Users/gademb/stage2017/Gabriel/codegen";
 void real_network()
 {
     auto network = parse(sexpr::read_file(actual_path + "/realnet/realnet.nn"), actual_path + "/realnet/")[0];
-    assert_valid(network);
-    for (double out : gen_feedforward(network)(read_data(actual_path + "/realnet/translated-mnist-ex/index-217-N-input.nn")))
-        cout << out << ' ';
-    auto interface = sim_interface(read_data(actual_path + "/realnet/translated-mnist-ex/index-217-N-input.nn"));
+    //assert_valid(network);
+    //for (double out : gen_feedforward(network)(read_data(actual_path + "/realnet/translated-mnist-ex/index-217-N-input.nn")))
+    //    cout << out << ' ';
+    auto interface = block_interface();//sim_interface(read_data(actual_path + "/realnet/translated-mnist-ex/index-217-N-input.nn"));
     ofstream file("C:/Users/gademb/stage2017/Gabriel/nnet/system.vhd", ios::trunc);
     if (!file.is_open())
         throw runtime_error("Can't open system.vhd.");
@@ -311,11 +316,11 @@ void conv_network()
 
 int main()
 {
-    //toy_network2();
+    toy_network2();
     //real_network();
     //toy_network_bin();
     //real_network_bin();
-    conv_network();
+    //conv_network();
 }
 
 #endif // COMPILED_AS_TOOL
