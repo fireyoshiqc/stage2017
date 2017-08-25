@@ -2,7 +2,8 @@
 This repo hosts various HDL and Python projects that could be useful for developing research contributions related to neural networks.
 ## Active projects
 ### Félix
-
+#### ConvTest
+A module that implements a combination of ConvUnit and nnet in a single multi-layer neural network. Its general structure is described in _test.nn_ (maybe only present in the keragen repository, to confirm). As of August 25, 2017, it is not fully functional despite each sub-network being tested and functional.
 ### Gabriel
 
 ## Completed projects
@@ -27,6 +28,8 @@ A mechanism for initializing and displaying up to 256 4x4 characters to the ZedB
 #### TestOverlay
 A tentative AXI4 Full+Lite peripheral to communicate from the PS to the PL using the Pynq board.
 Currently works with a combinatorial module, but not with a synchronous module (work in progress).
+### ConvBNN
+A tentative binarized convolutional neural network. Never really advanced.
 ### Gabriel
 #### nnet (fcbin_layer)
 Binarized version of ordinary fc layers (works, but not tested with a real trained binarized network).
