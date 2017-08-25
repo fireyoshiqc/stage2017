@@ -1,0 +1,42 @@
+nnet-codegen
+(import w2 "data/convtest_w2.nn")
+(import w3 "data/convtest_w3.nn")
+(import b2 "data/convtest_b2.nn")
+(import b3 "data/convtest_b3.nn")
+(network
+  (input 28 28 1 (fixed 0 8))
+
+  (conv2d (output 10 (fixed 0 8)) (weights (file convtest_w0.txt) (fixed 1 8)) (simd 1) (padding same) (stride 1) (kernel 3)
+      (neuron
+        (bias (file convtest_b0.txt) (fixed 1 8))
+        (relu)))
+  (pool (max 2) (stride 2) (padding valid))
+  (conv2d (output 10 (fixed 0 8)) (weights (file convtest_w1.txt) (fixed 1 8)) (simd 1) (padding same) (stride 1) (kernel 5)
+      (neuron
+        (bias (file convtest_b1.txt) (fixed 1 8))
+        (relu)))
+  (pool (max 2) (stride 2) (padding valid))
+  
+  (fc (output 40 (fixed 5 8)) (weights (data @w2)) (simd 70)
+      (neuron
+        (bias (data @b2))
+        (relu)))
+  (fc (output 10 (fixed 2 8)) (weights (data @w3)) (simd 10)
+      (neuron
+        (bias (data @b3))
+        (sigmoid (fixed 2 8) 2 16)))
+)
+
+"
+(conv2d (output 10 (fixed 0 8)) (weights (file convtest_w0.txt) (fixed 1 8)) (simd 1) (padding same) (stride 1) (kernel 3)
+      (neuron
+        (bias (file convtest_b0.txt) (fixed 1 8))
+        (relu)))
+  (pool (max 2) (stride 2) (padding valid))
+  (conv2d (output 10 (fixed 0 8)) (weights (file convtest_w1.txt) (fixed 1 8)) (simd 1) (padding same) (stride 1) (kernel 5)
+      (neuron
+        (bias (file convtest_b1.txt) (fixed 1 8))
+        (relu)))
+  (pool (max 2) (stride 2) (padding valid))
+  "
+  "(input 28 28 1 (fixed 0 8))"

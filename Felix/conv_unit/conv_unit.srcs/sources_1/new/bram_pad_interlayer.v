@@ -22,11 +22,11 @@
 
 module bram_pad_interlayer
     #(
-    parameter init_file = "",
-    parameter channels = 4,
+    parameter init_file = "imagedata_7.txt",
+    parameter channels = 1,
     parameter channel_width = 8,
     parameter zero_padding = 0,
-    parameter layer_size = 2, //WITHOUT PADDING
+    parameter layer_size = 28, //WITHOUT PADDING
     parameter data_depth = (layer_size+2*zero_padding)**2,
     parameter absolute_depth = 0
     )

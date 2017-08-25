@@ -73,7 +73,9 @@ module conv_to_fc_interlayer#(
         else if (done) begin // MODULE BEFORE IS DONE, LAST WORD HAS BEEN RECEIVED, SO END THE OUTPUT
             bram_din <= bram_din;
             bram_addr <= bram_addr;
-            bram_wren <= 1'b1;
+            if (count > 0) begin
+                bram_wren <= 1'b1;
+            end
             count <= count;
             layer_done <= 1'b1;
         
