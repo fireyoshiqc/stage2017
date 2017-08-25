@@ -7,6 +7,8 @@ This repo hosts various HDL and Python projects that could be useful for develop
 
 ## Completed projects
 ### Félix
+#### ShiftNN
+A module that implements the Programmable Logic (PL) part of the Multiplierless Overlay Architecture for DNNs on FPGA, proposed by Ahmed Abdelsalam. It is a fully functioning version, which allows for a maximum of ~1000 hidden shift-neurons and ~30 output classes. The single-layer neural network that is implemented in the _test_interface.v_ file is ready to be synthesized, implemented and made as a bitstream for any Xilinx FPGA. Network parameters can be changed on the fly by providing control signals to the module, dictating the desired number of active shift-neurons and output classes. The network is intended to be used in a Teacher-to-Student configuration, receiving pre-trained data from a software floating point network. This is described in the paper _A Single Hidden Layer Multiplierless Overlay Architecture for DNNs on FPGA_ by Ahmed Abdelsalam et al. For complete implementation and 100%-correct functionality, it should be used in conjunction with the AXI4 data interconnect described in the paper.
 #### ConvUnit
 A module that encapsulates a complete convolutional neural network. It includes fully customizable convolutional and pooling layers, as well as BRAM-style interlayers to hold data between layers. Still needs an interface for connecting to the AXI Interconnect of the Zynq SoC.
 #### LFSR RNG
